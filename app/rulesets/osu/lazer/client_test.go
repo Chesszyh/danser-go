@@ -11,7 +11,7 @@ import (
 
 func TestDecodeResponse(t *testing.T) {
 	response, err := decodeResponse([]byte(`{
-		"protocolVersion": 2,
+		"protocolVersion": 3,
 		"engine": {
 			"ruleset": "osu.Game.Rulesets.Osu.OsuRuleset",
 			"osuSourceRevision": "48c4800"
@@ -44,13 +44,13 @@ func TestDecodeResponse(t *testing.T) {
 
 func TestDecodeResponseRejectsProtocolMismatch(t *testing.T) {
 	_, err := decodeResponse([]byte(`{
-		"protocolVersion": 3,
+		"protocolVersion": 4,
 		"engine": {
 			"ruleset": "osu.Game.Rulesets.Osu.OsuRuleset",
 			"osuSourceRevision": "48c4800"
 		}
 	}`))
-	if err == nil || !strings.Contains(err.Error(), "protocol version 3") {
+	if err == nil || !strings.Contains(err.Error(), "protocol version 4") {
 		t.Fatalf("decodeResponse() error = %v", err)
 	}
 }

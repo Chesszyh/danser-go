@@ -7,7 +7,7 @@ namespace Danser.LazerRulesHost;
 
 internal static class Protocol
 {
-    public const int Version = 2;
+    public const int Version = 3;
 }
 
 internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath, string? ModsJson)
@@ -60,6 +60,66 @@ internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath, stri
     private static ArgumentException usageError() =>
         new("Expected: rejudge --beatmap <map.osu> --replay <score.osr> [--mods-json <json>]");
 }
+
+internal sealed record LiveRequest(string BeatmapPath, string ModsJson)
+{
+    public static LiveRequest Parse(string[] args)
+    {
+        if (args.Length != 5 || args[0] != "live")
+            throw usageError();
+
+        string? beatmap = null;
+        string? modsJson = null;
+
+        for (int i = 1; i < args.Length; i += 2)
+        {
+            switch (args[i])
+            {
+                case "--beatmap":
+                    beatmap = args[i + 1];
+                    break;
+
+                case "--mods-json":
+                    modsJson = args[i + 1];
+                    break;
+
+                default:
+                    throw usageError();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(beatmap) || modsJson == null)
+            throw usageError();
+
+        beatmap = Path.GetFullPath(beatmap);
+        if (!File.Exists(beatmap))
+            throw new ArgumentException($"Beatmap file not found: {beatmap}");
+
+        return new LiveRequest(beatmap, modsJson);
+    }
+
+    private static ArgumentException usageError() =>
+        new("Expected: live --beatmap <map.osu> --mods-json <json>");
+}
+
+internal sealed record LiveInput(
+    string Type,
+    long FrameId,
+    double Time,
+    float X,
+    float Y,
+    bool Left,
+    bool Right,
+    bool Smoke);
+
+internal sealed record LiveServerMessage(
+    string Type,
+    int ProtocolVersion,
+    EngineInfo? Engine = null,
+    long? FrameId = null,
+    IReadOnlyList<JudgementEvent>? Judgements = null,
+    ScoreSnapshot? Score = null,
+    string? Message = null);
 
 internal sealed record ReplayResponse(
     int ProtocolVersion,

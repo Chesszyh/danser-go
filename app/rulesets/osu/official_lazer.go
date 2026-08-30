@@ -10,7 +10,8 @@ import (
 )
 
 type officialReplayState struct {
-	trace         *lazer.ReplayResponse
+	judgements    []lazer.JudgementEvent
+	final         *lazer.ScoreSnapshot
 	next          int
 	finalApplied  bool
 	health        float64
@@ -32,7 +33,62 @@ func (set *OsuRuleSet) UseOfficialLazerReplay(cursor *graphics.Cursor, trace *la
 		return fmt.Errorf("official lazer replay has incomplete final performance results")
 	}
 
-	for index, event := range trace.Judgements {
+	if err := set.validateOfficialJudgements(trace.Judgements); err != nil {
+		return err
+	}
+
+	final := trace.Rejudged
+	set.officialReplays[cursor] = &officialReplayState{
+		judgements: trace.Judgements,
+		final:      &final,
+		health:     1,
+	}
+	return nil
+}
+
+func (set *OsuRuleSet) UseOfficialLazerLive(cursor *graphics.Cursor) error {
+	if _, exists := set.cursors[cursor]; !exists {
+		return fmt.Errorf("official lazer live cursor is not part of this ruleset")
+	}
+
+	set.officialReplays[cursor] = &officialReplayState{health: 1}
+	return nil
+}
+
+func (set *OsuRuleSet) AddOfficialLazerLiveJudgements(cursor *graphics.Cursor, events []lazer.JudgementEvent) error {
+	state := set.officialReplays[cursor]
+	if state == nil {
+		return fmt.Errorf("official lazer live cursor is not active")
+	}
+
+	if state.final != nil {
+		return fmt.Errorf("official lazer live score is already complete")
+	}
+
+	if err := set.validateOfficialJudgements(events); err != nil {
+		return err
+	}
+
+	state.judgements = append(state.judgements, events...)
+	return nil
+}
+
+func (set *OsuRuleSet) CompleteOfficialLazerLive(cursor *graphics.Cursor, result *lazer.LiveResult) error {
+	if err := set.AddOfficialLazerLiveJudgements(cursor, result.Judgements); err != nil {
+		return err
+	}
+
+	if result.Score.Performance == nil || result.Score.FullComboPerformance == nil || result.Score.PerfectPerformance == nil {
+		return fmt.Errorf("official lazer live score has incomplete final performance results")
+	}
+
+	final := result.Score
+	set.officialReplays[cursor].final = &final
+	return nil
+}
+
+func (set *OsuRuleSet) validateOfficialJudgements(events []lazer.JudgementEvent) error {
+	for index, event := range events {
 		if event.ObjectIndex < 0 || event.ObjectIndex >= len(set.beatMap.HitObjects) {
 			return fmt.Errorf("official judgement %d references beatmap object %d", index, event.ObjectIndex)
 		}
@@ -46,14 +102,13 @@ func (set *OsuRuleSet) UseOfficialLazerReplay(cursor *graphics.Cursor, trace *la
 		}
 	}
 
-	set.officialReplays[cursor] = &officialReplayState{trace: trace, health: 1}
 	return nil
 }
 
 func (set *OsuRuleSet) updateOfficialReplays(time int64) {
 	for cursor, state := range set.officialReplays {
-		for state.next < len(state.trace.Judgements) {
-			event := state.trace.Judgements[state.next]
+		for state.next < len(state.judgements) {
+			event := state.judgements[state.next]
 			if event.JudgedAt > float64(time) {
 				break
 			}
@@ -92,8 +147,8 @@ func (set *OsuRuleSet) updateOfficialReplays(time int64) {
 			state.next++
 		}
 
-		if state.next == len(state.trace.Judgements) && !state.finalApplied {
-			set.applyOfficialSnapshot(cursor, state.trace.Rejudged, state)
+		if state.final != nil && state.next == len(state.judgements) && !state.finalApplied {
+			set.applyOfficialSnapshot(cursor, *state.final, state)
 			state.finalApplied = true
 		}
 	}

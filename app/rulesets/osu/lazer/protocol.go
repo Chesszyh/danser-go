@@ -59,3 +59,38 @@ type JudgementEvent struct {
 	CursorY         *float32      `json:"cursorY"`
 	Score           ScoreSnapshot `json:"score"`
 }
+
+type LiveFrame struct {
+	Time  float64
+	X     float32
+	Y     float32
+	Left  bool
+	Right bool
+	Smoke bool
+}
+
+type LiveResult struct {
+	Judgements []JudgementEvent
+	Score      ScoreSnapshot
+}
+
+type liveInput struct {
+	Type    string  `json:"type"`
+	FrameID int64   `json:"frameId"`
+	Time    float64 `json:"time"`
+	X       float32 `json:"x"`
+	Y       float32 `json:"y"`
+	Left    bool    `json:"left"`
+	Right   bool    `json:"right"`
+	Smoke   bool    `json:"smoke"`
+}
+
+type liveServerMessage struct {
+	Type            string           `json:"type"`
+	ProtocolVersion int              `json:"protocolVersion"`
+	Engine          *EngineInfo      `json:"engine"`
+	FrameID         *int64           `json:"frameId"`
+	Judgements      []JudgementEvent `json:"judgements"`
+	Score           *ScoreSnapshot   `json:"score"`
+	Message         string           `json:"message"`
+}

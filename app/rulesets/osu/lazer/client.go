@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ProtocolVersion  = 2
+	ProtocolVersion  = 3
 	hostCommand      = "danser-lazer-rules"
 	maxParallelHosts = 2
 )
@@ -138,12 +138,8 @@ func decodeResponse(data []byte) (*ReplayResponse, error) {
 		return nil, fmt.Errorf("protocol version %d is unsupported; expected %d", response.ProtocolVersion, ProtocolVersion)
 	}
 
-	if response.Engine.Ruleset != "osu.Game.Rulesets.Osu.OsuRuleset" {
-		return nil, fmt.Errorf("ruleset %q is not osu!standard", response.Engine.Ruleset)
-	}
-
-	if response.Engine.OsuSourceRevision == "" {
-		return nil, fmt.Errorf("osu! source revision is missing")
+	if err := validateEngine(response.Engine); err != nil {
+		return nil, err
 	}
 
 	return &response, nil

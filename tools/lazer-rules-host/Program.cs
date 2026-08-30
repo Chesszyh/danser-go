@@ -17,13 +17,18 @@ internal static class Program
         if (args.Length == 1 && args[0] is "--help" or "-h")
         {
             Console.WriteLine("Usage: danser-lazer-rules rejudge --beatmap <map.osu> --replay <score.osr> [--mods-json <json>]");
+            Console.WriteLine("       danser-lazer-rules live --beatmap <map.osu> --mods-json <json>");
             return 0;
         }
 
         try
         {
-            ReplayRequest request = ReplayRequest.Parse(args);
             Logger.Enabled = false;
+
+            if (args.FirstOrDefault() == "live")
+                return runLive(LiveRequest.Parse(args));
+
+            ReplayRequest request = ReplayRequest.Parse(args);
 
             var game = new ReplayAnalysisGame(request, getOsuSourceRevision());
             TextWriter standardOutput = Console.Out;
@@ -58,6 +63,25 @@ internal static class Program
             Console.Error.WriteLine($"lazer rejudgement failed: {error.Message}");
             return 1;
         }
+    }
+
+    private static int runLive(LiveRequest request)
+    {
+        TextWriter standardOutput = Console.Out;
+        var game = new LiveAnalysisGame(request, getOsuSourceRevision(), Console.In, standardOutput);
+
+        try
+        {
+            Console.SetOut(TextWriter.Null);
+            using var host = new TestRunHeadlessGameHost("danser-lazer-rules-live", realtime: false);
+            host.Run(game);
+        }
+        finally
+        {
+            Console.SetOut(standardOutput);
+        }
+
+        return game.Failure == null ? 0 : 1;
     }
 
     private static string getOsuSourceRevision() =>

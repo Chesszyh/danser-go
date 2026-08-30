@@ -134,7 +134,7 @@ Afterwards type:
 Running without arguments (as opposed in [Running Danser](#running-danser)) will give you the launcher, though you can't
 use drag&drop on the executable to preload a replay. If that ability is desired, build danser using dist scripts.
 
-To rejudge a local lazer replay with the official osu! source, build and enable the [official rules host](tools/lazer-rules-host/README.md).
+To use the official osu! source for local lazer replays or live play, build and enable the [official rules host](tools/lazer-rules-host/README.md).
 
 
 ## Credits and License
