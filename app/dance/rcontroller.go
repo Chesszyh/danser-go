@@ -56,6 +56,8 @@ type subControl struct {
 	diff            *difficulty.Difficulty
 
 	modifiedMods bool
+	lazerReplay  bool
+	replayPath   string
 }
 
 func NewSubControl() *subControl {
@@ -64,13 +66,18 @@ func NewSubControl() *subControl {
 }
 
 type ReplayController struct {
-	bMap          *beatmap.BeatMap
-	replays       []RpData
-	cursors       []*graphics.Cursor
-	controllers   []*subControl
-	ruleset       *osu.OsuRuleSet
-	officialTrace *lazer.ReplayResponse
-	lastTime      float64
+	bMap           *beatmap.BeatMap
+	replays        []RpData
+	cursors        []*graphics.Cursor
+	controllers    []*subControl
+	ruleset        *osu.OsuRuleSet
+	officialTraces []*lazer.ReplayResponse
+	lastTime       float64
+}
+
+type replayCandidate struct {
+	replay *rplpa.Replay
+	path   string
 }
 
 func NewReplayController() Controller {
@@ -84,7 +91,7 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 
 	organizeReplays()
 
-	candidates := make([]*rplpa.Replay, 0)
+	candidates := make([]replayCandidate, 0)
 
 	localReplay := false
 	if settings.REPLAY != "" {
@@ -100,7 +107,7 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 		if replayD.ReplayData == nil || len(replayD.ReplayData) == 0 {
 			log.Println("Excluding for missing input data:", replayD.Username)
 		} else {
-			candidates = append(candidates, replayD)
+			candidates = append(candidates, replayCandidate{replay: replayD, path: settings.REPLAY})
 
 			localReplay = true
 		}
@@ -110,7 +117,7 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 
 	if !localReplay {
 		sort.Slice(candidates, func(i, j int) bool {
-			return candidates[i].Score > candidates[j].Score
+			return candidates[i].replay.Score > candidates[j].replay.Score
 		})
 
 		if settings.KNOCKOUTREPLAYS == nil || len(settings.KNOCKOUTREPLAYS) == 0 { // limit only with classic knockout
@@ -120,10 +127,13 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 
 	displayedMods := ^difficulty.ParseMods(settings.Knockout.HideMods)
 
-	for i, replay := range candidates {
+	for i, candidate := range candidates {
+		replay := candidate.replay
 		log.Println(fmt.Sprintf("Loading replay for \"%s\":", replay.Username))
 
 		control := NewSubControl()
+		control.replayPath = candidate.path
+		control.lazerReplay = replay.OsuVersion >= 30000000
 
 		control.diff = beatMap.Diff.Clone()
 		control.diff.SetMods(difficulty.None)
@@ -140,8 +150,11 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 			control.diff.SetMods(difficulty.Modifier(replay.Mods))
 		}
 
-		if replay.OsuVersion >= 30000000 { // Lazer is 1000 years in the future
+		if control.lazerReplay {
 			control.diff.Mods |= difficulty.Lazer
+			if localReplay && !beatMap.Diff.CheckModActive(difficulty.Lazer) {
+				beatMap.Diff.AddMod(difficulty.Lazer)
+			}
 		}
 
 		if localReplay && !beatMap.Diff.Equals(control.diff) {
@@ -182,20 +195,52 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 
 	settings.PLAYERS = len(controller.replays)
 
-	if localReplay && len(controller.controllers) == 1 && controller.controllers[0].diff.CheckModActive(difficulty.Lazer) && settings.Gameplay.LazerRulesEngine == "official" {
-		if controller.controllers[0].modifiedMods {
-			panic("Official osu!lazer rules require the replay's original mods; remove -mods and -mods2 overrides")
-		}
+	controller.loadOfficialReplays(beatMap)
+}
 
-		beatmapPath := filepath.Join(settings.General.GetSongsDir(), beatMap.Dir, beatMap.File)
-		var err error
-		controller.officialTrace, err = lazer.Rejudge(context.Background(), beatmapPath, settings.REPLAY)
-		if err != nil {
-			panic(err)
-		}
-
-		log.Printf("Using official osu!lazer rules from %s", controller.officialTrace.Engine.OsuSourceRevision)
+func (controller *ReplayController) loadOfficialReplays(beatMap *beatmap.BeatMap) {
+	if settings.Gameplay.LazerRulesEngine != "official" {
+		return
 	}
+
+	requests := make([]lazer.ReplayRequest, 0, len(controller.controllers))
+	indices := make([]int, 0, len(controller.controllers))
+
+	for index, control := range controller.controllers {
+		if !control.lazerReplay || control.replayPath == "" {
+			continue
+		}
+
+		var mods []rplpa.ModInfo
+		if control.modifiedMods {
+			mods = make([]rplpa.ModInfo, 0)
+			for _, mod := range control.diff.ExportMods2() {
+				if mod.Acronym != "LZ" {
+					mods = append(mods, mod)
+				}
+			}
+		}
+
+		requests = append(requests, lazer.ReplayRequest{ReplayPath: control.replayPath, Mods: mods})
+		indices = append(indices, index)
+	}
+
+	if len(requests) == 0 {
+		return
+	}
+
+	beatmapPath := filepath.Join(settings.General.GetSongsDir(), beatMap.Dir, beatMap.File)
+	traces, err := lazer.Rejudge(context.Background(), beatmapPath, requests)
+	if err != nil {
+		panic(err)
+	}
+
+	controller.officialTraces = make([]*lazer.ReplayResponse, len(controller.controllers))
+	for index, trace := range traces {
+		controller.officialTraces[indices[index]] = trace
+	}
+
+	log.Printf("Using official osu!lazer rules from %s for %d replay(s)", traces[0].Engine.OsuSourceRevision, len(traces))
 }
 
 func organizeReplays() {
@@ -235,7 +280,7 @@ func organizeReplays() {
 	}
 }
 
-func (controller *ReplayController) getCandidates() (candidates []*rplpa.Replay) {
+func (controller *ReplayController) getCandidates() (candidates []replayCandidate) {
 	excludedMods := difficulty.ParseMods(settings.Knockout.ExcludeMods)
 
 	tryAddReplay := func(path string, modExclude bool) {
@@ -273,7 +318,7 @@ func (controller *ReplayController) getCandidates() (candidates []*rplpa.Replay)
 			return
 		}
 
-		candidates = append(candidates, replayD)
+		candidates = append(candidates, replayCandidate{replay: replayD, path: path})
 	}
 
 	if settings.KNOCKOUTREPLAYS != nil && len(settings.KNOCKOUTREPLAYS) > 0 {
@@ -344,6 +389,7 @@ func loadFrames(subController *subControl, frames []*rplpa.ReplayData) {
 
 func (controller *ReplayController) InitCursors() {
 	var diffs []*difficulty.Difficulty
+	officialAssignments := make(map[*graphics.Cursor]*lazer.ReplayResponse)
 
 	for i, c := range controller.controllers {
 		if controller.controllers[i].danceController != nil {
@@ -377,6 +423,9 @@ func (controller *ReplayController) InitCursors() {
 			c.frames = c.frames[1:]
 
 			controller.cursors = append(controller.cursors, cursor)
+			if i < len(controller.officialTraces) && controller.officialTraces[i] != nil {
+				officialAssignments[cursor] = controller.officialTraces[i]
+			}
 		}
 
 		rMS, rMOk := difficulty.GetModConfig[difficulty.MirrorSettings](c.diff)
@@ -402,8 +451,8 @@ func (controller *ReplayController) InitCursors() {
 
 	controller.ruleset = osu.NewOsuRuleset(controller.bMap, controller.cursors, diffs)
 
-	if controller.officialTrace != nil {
-		if err := controller.ruleset.UseOfficialLazerReplay(controller.cursors[0], controller.officialTrace); err != nil {
+	for cursor, trace := range officialAssignments {
+		if err := controller.ruleset.UseOfficialLazerReplay(cursor, trace); err != nil {
 			panic(err)
 		}
 	}

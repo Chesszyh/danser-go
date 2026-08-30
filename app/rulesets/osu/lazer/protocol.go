@@ -21,15 +21,17 @@ type ReplayInfo struct {
 }
 
 type ScoreSnapshot struct {
-	TotalScore   int64          `json:"totalScore"`
-	Accuracy     float64        `json:"accuracy"`
-	CurrentCombo int            `json:"currentCombo"`
-	MaxCombo     int            `json:"maxCombo"`
-	Rank         string         `json:"rank"`
-	Health       *float64       `json:"health"`
-	Failed       bool           `json:"failed"`
-	Performance  *Performance   `json:"performance"`
-	Statistics   map[string]int `json:"statistics"`
+	TotalScore           int64          `json:"totalScore"`
+	Accuracy             float64        `json:"accuracy"`
+	CurrentCombo         int            `json:"currentCombo"`
+	MaxCombo             int            `json:"maxCombo"`
+	Rank                 string         `json:"rank"`
+	Health               *float64       `json:"health"`
+	Failed               bool           `json:"failed"`
+	Performance          *Performance   `json:"performance"`
+	FullComboPerformance *Performance   `json:"fullComboPerformance"`
+	PerfectPerformance   *Performance   `json:"perfectPerformance"`
+	Statistics           map[string]int `json:"statistics"`
 }
 
 type Performance struct {

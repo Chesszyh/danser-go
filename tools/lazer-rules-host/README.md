@@ -6,7 +6,9 @@ The osu! source is pinned by the `third_party/osu` Git submodule. Every response
 
 ## Current scope
 
-Official rules are available for one local lazer replay loaded with `-replay`. The replay's original mods are required. Live play, knockout or other multi-replay modes, and `-mods`/`-mods2` overrides still use the built-in engine.
+Official rules are available for local lazer replays loaded with `-replay`, `-knockout`, or `-knockout2`. Knockout replays are analysed by at most two host processes at once to bound memory use. `-mods` and `-mods2` overrides are converted to osu!'s acronym/settings representation and validated by the official ruleset.
+
+Live `-play` input still uses the built-in engine.
 
 ## Build
 
@@ -36,10 +38,11 @@ The host prints one JSON document to standard output:
 ```bash
 ./lazer-rules-host/danser-lazer-rules rejudge \
   --beatmap /path/to/map.osu \
-  --replay /path/to/replay.osr
+  --replay /path/to/replay.osr \
+  --mods-json '[{"acronym":"HD"}]'
 ```
 
-`recorded` is the score stored in the replay. `rejudged` and `judgements` are calculated by the pinned osu! source.
+Omit `--mods-json` to use the replay's original mods. `recorded` is always the score stored in the replay. `rejudged`, per-judgement score snapshots, and actual, full-combo, and perfect-play PP are calculated by the pinned osu! source.
 
 ## Update osu!lazer
 

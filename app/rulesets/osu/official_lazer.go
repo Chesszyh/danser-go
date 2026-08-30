@@ -15,6 +15,8 @@ type officialReplayState struct {
 	finalApplied  bool
 	health        float64
 	failed        bool
+	fullComboPP   api.PPv2Results
+	perfectPP     api.PPv2Results
 	sliderBreaks  uint
 	maxTicks      uint
 	sliderEnds    uint
@@ -26,8 +28,8 @@ func (set *OsuRuleSet) UseOfficialLazerReplay(cursor *graphics.Cursor, trace *la
 		return fmt.Errorf("official lazer replay cursor is not part of this ruleset")
 	}
 
-	if trace.Rejudged.Performance == nil {
-		return fmt.Errorf("official lazer replay has no final performance result")
+	if trace.Rejudged.Performance == nil || trace.Rejudged.FullComboPerformance == nil || trace.Rejudged.PerfectPerformance == nil {
+		return fmt.Errorf("official lazer replay has incomplete final performance results")
 	}
 
 	for index, event := range trace.Judgements {
@@ -140,14 +142,15 @@ func (set *OsuRuleSet) applyOfficialSnapshot(cursor *graphics.Cursor, snapshot l
 	score.PerfectCombo = snapshot.Rank == "X" || snapshot.Rank == "XH"
 
 	if snapshot.Performance != nil {
-		score.PP = api.PPv2Results{
-			Aim:        snapshot.Performance.Aim,
-			Speed:      snapshot.Performance.Speed,
-			Acc:        snapshot.Performance.Accuracy,
-			Flashlight: snapshot.Performance.Flashlight,
-			Reading:    snapshot.Performance.Reading,
-			Total:      snapshot.Performance.Total,
-		}
+		score.PP = mapOfficialPerformance(snapshot.Performance)
+	}
+
+	if snapshot.FullComboPerformance != nil {
+		state.fullComboPP = mapOfficialPerformance(snapshot.FullComboPerformance)
+	}
+
+	if snapshot.PerfectPerformance != nil {
+		state.perfectPP = mapOfficialPerformance(snapshot.PerfectPerformance)
 	}
 
 	if snapshot.Health != nil {
@@ -159,6 +162,17 @@ func (set *OsuRuleSet) applyOfficialSnapshot(cursor *graphics.Cursor, snapshot l
 		if set.failListener != nil {
 			set.failListener(cursor)
 		}
+	}
+}
+
+func mapOfficialPerformance(performance *lazer.Performance) api.PPv2Results {
+	return api.PPv2Results{
+		Aim:        performance.Aim,
+		Speed:      performance.Speed,
+		Acc:        performance.Accuracy,
+		Flashlight: performance.Flashlight,
+		Reading:    performance.Reading,
+		Total:      performance.Total,
 	}
 }
 

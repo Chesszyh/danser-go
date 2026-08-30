@@ -808,6 +808,10 @@ func (set *OsuRuleSet) SetFailListener(listener failListener) {
 }
 
 func (set *OsuRuleSet) GetFCPP(cursor *graphics.Cursor) api.PPv2Results {
+	if official := set.officialReplays[cursor]; official != nil {
+		return official.fullComboPP
+	}
+
 	subSet := set.cursors[cursor]
 
 	index := max(1, subSet.score.scoredObjects) - 1
@@ -844,6 +848,10 @@ func (set *OsuRuleSet) GetFCPP(cursor *graphics.Cursor) api.PPv2Results {
 }
 
 func (set *OsuRuleSet) GetSSPP(cursor *graphics.Cursor) api.PPv2Results {
+	if official := set.officialReplays[cursor]; official != nil {
+		return official.perfectPP
+	}
+
 	subSet := set.cursors[cursor]
 
 	index := max(1, subSet.score.scoredObjects) - 1

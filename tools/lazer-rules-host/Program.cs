@@ -16,7 +16,7 @@ internal static class Program
     {
         if (args.Length == 1 && args[0] is "--help" or "-h")
         {
-            Console.WriteLine("Usage: danser-lazer-rules rejudge --beatmap <map.osu> --replay <score.osr>");
+            Console.WriteLine("Usage: danser-lazer-rules rejudge --beatmap <map.osu> --replay <score.osr> [--mods-json <json>]");
             return 0;
         }
 

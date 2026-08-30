@@ -1,14 +1,17 @@
 using System.Security.Cryptography;
+using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Screens;
 using osu.Game;
 using osu.Game.Beatmaps;
+using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Objects;
@@ -18,6 +21,7 @@ using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Game.Screens;
 using osu.Game.Screens.Play;
+using osu.Game.Utils;
 
 namespace Danser.LazerRulesHost;
 
@@ -28,9 +32,11 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
     private readonly DummyAPIAccess dummyApi = new();
     private readonly List<JudgementEvent> judgements = [];
     private readonly Dictionary<HitObject, (int Index, string Part)> objectLookup = new();
+    private readonly Dictionary<HitResult, int> currentMaximumStatistics = new();
 
     private ReplayPlayer? player;
     private Score? recorded;
+    private ScoreSnapshot? recordedSnapshot;
     private SilentWorkingBeatmap? workingBeatmap;
     private PerformanceCalculator? performanceCalculator;
     private DifficultyAttributes? finalDifficultyAttributes;
@@ -82,6 +88,10 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             string beatmapHash = Convert.ToHexString(MD5.HashData(File.ReadAllBytes(request.BeatmapPath))).ToLowerInvariant();
             using var replayStream = File.OpenRead(request.ReplayPath);
             recorded = new SuppliedBeatmapDecoder(workingBeatmap, beatmapHash).Parse(replayStream);
+            recordedSnapshot = ScoreSnapshot.From(recorded.ScoreInfo);
+
+            if (request.ModsJson != null)
+                recorded.ScoreInfo.Mods = parseMods(request.ModsJson);
 
             Beatmap.Value = workingBeatmap;
             Ruleset.Value = recorded.ScoreInfo.Ruleset;
@@ -138,8 +148,15 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
         var score = recorded.ScoreInfo.DeepClone();
         player.GameplayState.ScoreProcessor.PopulateScore(score);
 
+        bool affectsScore = !result.FailedAtJudgement || player.GameplayState.ScoreProcessor.ApplyNewJudgementsWhenFailed;
+        if (affectsScore)
+        {
+            HitResult maxResult = result.Judgement.MaxResult;
+            currentMaximumStatistics[maxResult] = currentMaximumStatistics.GetValueOrDefault(maxResult) + 1;
+        }
+
         DifficultyAttributes? difficulty = getTimedDifficulty(result.HitObject.GetEndTime());
-        PerformanceAttributes? performance = difficulty == null ? null : performanceCalculator.Calculate(score, difficulty);
+        (PerformanceAttributes? performance, PerformanceAttributes? fullCombo, PerformanceAttributes? perfect) = calculatePerformance(score, difficulty);
         (int index, string part) = objectLookup.GetValueOrDefault(result.HitObject, (-1, result.HitObject.GetType().Name));
         var cursor = (result as OsuHitCircleJudgementResult)?.CursorPositionAtHit;
 
@@ -152,7 +169,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             result.Judgement.MaxResult.ToString(),
             result.TimeAbsolute,
             result.TimeOffset,
-            !result.FailedAtJudgement || player.GameplayState.ScoreProcessor.ApplyNewJudgementsWhenFailed,
+            affectsScore,
             result.ComboAtJudgement,
             result.ComboAfterJudgement,
             cursor?.X,
@@ -160,8 +177,10 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             ScoreSnapshot.From(
                 score,
                 performance,
-                player.GameplayState.HealthProcessor.Health.Value,
-                player.GameplayState.HealthProcessor.HasFailed)));
+                fullCombo,
+                perfect,
+                health: player.GameplayState.HealthProcessor.Health.Value,
+                failed: player.GameplayState.HealthProcessor.HasFailed)));
     }
 
     private DifficultyAttributes? getTimedDifficulty(double objectEndTime)
@@ -187,7 +206,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
         {
             var rejudged = recorded.ScoreInfo.DeepClone();
             player.GameplayState.ScoreProcessor.PopulateScore(rejudged);
-            PerformanceAttributes performance = performanceCalculator.Calculate(rejudged, finalDifficultyAttributes);
+            (PerformanceAttributes? performance, PerformanceAttributes? fullCombo, PerformanceAttributes? perfect) = calculatePerformance(rejudged, finalDifficultyAttributes);
 
             Response = new ReplayResponse(
                 Protocol.Version,
@@ -196,12 +215,14 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
                     recorded.ScoreInfo.ClientVersion,
                     recorded.ScoreInfo.Mods.Select(mod => mod.Acronym).ToArray(),
                     recorded.Replay.Frames.Count),
-                ScoreSnapshot.From(recorded.ScoreInfo),
+                recordedSnapshot ?? throw new InvalidOperationException("The imported replay score was not captured."),
                 ScoreSnapshot.From(
                     rejudged,
                     performance,
-                    player.GameplayState.HealthProcessor.Health.Value,
-                    player.GameplayState.HealthProcessor.HasFailed),
+                    fullCombo,
+                    perfect,
+                    health: player.GameplayState.HealthProcessor.Health.Value,
+                    failed: player.GameplayState.HealthProcessor.HasFailed),
                 judgements);
         }
         catch (Exception error)
@@ -220,6 +241,61 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
         finished = true;
         Failure = error;
         Exit();
+    }
+
+    private Mod[] parseMods(string modsJson)
+    {
+        APIMod[] proposed = JsonConvert.DeserializeObject<APIMod[]>(modsJson)
+                            ?? throw new InvalidDataException("The mods override is not a JSON array.");
+        var ruleset = new OsuRuleset();
+
+        if (!ModUtils.InstantiateValidModsForRuleset(ruleset, proposed, out List<Mod> mods))
+            throw new InvalidDataException("The mods override contains a mod that osu!standard does not support.");
+
+        if (!ModUtils.CheckValidForGameplay(mods, out List<Mod>? invalid))
+            throw new InvalidDataException($"The mods override is not valid for gameplay: {string.Join(", ", invalid.Select(mod => mod.Acronym))}.");
+
+        return mods.ToArray();
+    }
+
+    private (PerformanceAttributes? Actual, PerformanceAttributes? FullCombo, PerformanceAttributes? Perfect) calculatePerformance(
+        ScoreInfo score,
+        DifficultyAttributes? difficulty)
+    {
+        if (difficulty == null || performanceCalculator == null || player == null)
+            return (null, null, null);
+
+        PerformanceAttributes actual = performanceCalculator.Calculate(score, difficulty);
+        ScoreInfo fullComboScore = score.DeepClone();
+        fullComboScore.MaximumStatistics = new Dictionary<HitResult, int>(currentMaximumStatistics);
+        replaceResult(fullComboScore, HitResult.Miss, HitResult.Great);
+        replaceResult(fullComboScore, HitResult.SmallTickMiss, HitResult.SmallTickHit);
+        replaceResult(fullComboScore, HitResult.LargeTickMiss, HitResult.LargeTickHit);
+        fullComboScore.Combo = fullComboScore.MaxCombo = fullComboScore.GetMaximumAchievableCombo();
+        fullComboScore.Accuracy = StandardisedScoreMigrationTools.ComputeAccuracy(fullComboScore, player.GameplayState.ScoreProcessor);
+        fullComboScore.Passed = true;
+
+        ScoreInfo perfectScore = score.DeepClone();
+        perfectScore.MaximumStatistics = new Dictionary<HitResult, int>(currentMaximumStatistics);
+        perfectScore.Statistics = new Dictionary<HitResult, int>(currentMaximumStatistics);
+        perfectScore.Combo = perfectScore.MaxCombo = perfectScore.GetMaximumAchievableCombo();
+        perfectScore.Accuracy = 1;
+        perfectScore.Passed = true;
+
+        return (
+            actual,
+            performanceCalculator.Calculate(fullComboScore, difficulty),
+            performanceCalculator.Calculate(perfectScore, difficulty));
+    }
+
+    private static void replaceResult(ScoreInfo score, HitResult source, HitResult replacement)
+    {
+        int count = score.Statistics.GetValueOrDefault(source);
+        if (count == 0)
+            return;
+
+        score.Statistics[source] = 0;
+        score.Statistics[replacement] = score.Statistics.GetValueOrDefault(replacement) + count;
     }
 
     private void buildObjectLookup(IBeatmap beatmap)

@@ -7,18 +7,19 @@ namespace Danser.LazerRulesHost;
 
 internal static class Protocol
 {
-    public const int Version = 1;
+    public const int Version = 2;
 }
 
-internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath)
+internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath, string? ModsJson)
 {
     public static ReplayRequest Parse(string[] args)
     {
-        if (args.Length != 5 || args[0] != "rejudge")
+        if (args.Length < 5 || args.Length % 2 == 0 || args[0] != "rejudge")
             throw usageError();
 
         string? beatmap = null;
         string? replay = null;
+        string? modsJson = null;
 
         for (int i = 1; i < args.Length; i += 2)
         {
@@ -30,6 +31,10 @@ internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath)
 
                 case "--replay":
                     replay = args[i + 1];
+                    break;
+
+                case "--mods-json":
+                    modsJson = args[i + 1];
                     break;
 
                 default:
@@ -49,11 +54,11 @@ internal sealed record ReplayRequest(string BeatmapPath, string ReplayPath)
         if (!File.Exists(replay))
             throw new ArgumentException($"Replay file not found: {replay}");
 
-        return new ReplayRequest(beatmap, replay);
+        return new ReplayRequest(beatmap, replay, modsJson);
     }
 
     private static ArgumentException usageError() =>
-        new("Expected: rejudge --beatmap <map.osu> --replay <score.osr>");
+        new("Expected: rejudge --beatmap <map.osu> --replay <score.osr> [--mods-json <json>]");
 }
 
 internal sealed record ReplayResponse(
@@ -77,9 +82,17 @@ internal sealed record ScoreSnapshot(
     double? Health,
     bool Failed,
     PerformanceSnapshot? Performance,
+    PerformanceSnapshot? FullComboPerformance,
+    PerformanceSnapshot? PerfectPerformance,
     IReadOnlyDictionary<string, int> Statistics)
 {
-    public static ScoreSnapshot From(ScoreInfo score, PerformanceAttributes? performance = null, double? health = null, bool failed = false) =>
+    public static ScoreSnapshot From(
+        ScoreInfo score,
+        PerformanceAttributes? performance = null,
+        PerformanceAttributes? fullComboPerformance = null,
+        PerformanceAttributes? perfectPerformance = null,
+        double? health = null,
+        bool failed = false) =>
         new(
             score.TotalScore,
             score.Accuracy,
@@ -89,6 +102,8 @@ internal sealed record ScoreSnapshot(
             health,
             failed,
             performance == null ? null : PerformanceSnapshot.From(performance),
+            fullComboPerformance == null ? null : PerformanceSnapshot.From(fullComboPerformance),
+            perfectPerformance == null ? null : PerformanceSnapshot.From(perfectPerformance),
             score.Statistics.Where(pair => pair.Value != 0)
                  .ToDictionary(pair => pair.Key.ToString(), pair => pair.Value));
 }
