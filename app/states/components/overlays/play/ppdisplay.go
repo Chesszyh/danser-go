@@ -27,6 +27,9 @@ type PPDisplay struct {
 
 	flashlightGlider *animation.TargetGlider
 	flashlightText   string
+	readingGlider    *animation.TargetGlider
+	readingText      string
+	showReading      bool
 
 	ppGlider *animation.TargetGlider
 	ppText   string
@@ -46,6 +49,7 @@ func NewPPDisplay(mods difficulty.Modifier) *PPDisplay {
 		tapGlider:        animation.NewTargetGlider(0, 0),
 		accGlider:        animation.NewTargetGlider(0, 0),
 		flashlightGlider: animation.NewTargetGlider(0, 0),
+		readingGlider:    animation.NewTargetGlider(0, 0),
 		ppGlider:         animation.NewTargetGlider(0, 0),
 		aimText:          "0pp",
 		tapText:          "0pp",
@@ -65,6 +69,8 @@ func (ppDisplay *PPDisplay) Add(results api.PPv2Results) {
 	ppDisplay.tapGlider.SetValue(results.Speed, static)
 	ppDisplay.accGlider.SetValue(results.Acc, static)
 	ppDisplay.flashlightGlider.SetValue(results.Flashlight, static)
+	ppDisplay.readingGlider.SetValue(results.Reading, static)
+	ppDisplay.showReading = ppDisplay.showReading || results.Reading != 0
 	ppDisplay.ppGlider.SetValue(results.Total, static)
 }
 
@@ -83,6 +89,7 @@ func (ppDisplay *PPDisplay) Update(time float64) {
 		ppDisplay.updatePP(ppDisplay.tapGlider, &ppDisplay.tapText, time, &mText)
 		ppDisplay.updatePP(ppDisplay.accGlider, &ppDisplay.accText, time, &mText)
 		ppDisplay.updatePP(ppDisplay.flashlightGlider, &ppDisplay.flashlightText, time, &mText)
+		ppDisplay.updatePP(ppDisplay.readingGlider, &ppDisplay.readingText, time, &mText)
 	}
 
 	ppDisplay.mText = mText
@@ -119,8 +126,15 @@ func (ppDisplay *PPDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 	if settings.Gameplay.PPCounter.ShowPPComponents {
 		length := ppDisplay.ppFont.GetWidthMonospaced(40*ppScale, "Total: ")
 		pLength := ppDisplay.ppFont.GetWidthMonospaced(40*ppScale, ppDisplay.mText)
+		rows := 4
+		if ppDisplay.mods.Active(difficulty.Flashlight) {
+			rows++
+		}
+		if ppDisplay.showReading {
+			rows++
+		}
 
-		position = position.Add(origin.AddS(1, 1).Mult(vector.NewVec2d(-(length+pLength)/2, -(160*ppScale)/2)))
+		position = position.Add(origin.AddS(1, 1).Mult(vector.NewVec2d(-(length+pLength)/2, -float64(rows)*40*ppScale/2)))
 
 		ppDisplay.drawPP(batch, "Aim:", ppDisplay.aimText, position, length, ppScale, color, vector.TopLeft)
 		ppDisplay.drawPP(batch, "Tap:", ppDisplay.tapText, position.AddS(0, 40*ppScale), length, ppScale, color, vector.TopLeft)
@@ -132,6 +146,11 @@ func (ppDisplay *PPDisplay) Draw(batch *batch.QuadBatch, alpha float64) {
 			ppDisplay.drawPP(batch, "FL:", ppDisplay.flashlightText, position.AddS(0, 120*ppScale), length, ppScale, color, vector.TopLeft)
 
 			offset = 40
+		}
+
+		if ppDisplay.showReading {
+			ppDisplay.drawPP(batch, "Read:", ppDisplay.readingText, position.AddS(0, (120+offset)*ppScale), length, ppScale, color, vector.TopLeft)
+			offset += 40
 		}
 
 		ppDisplay.drawPP(batch, "Total:", ppDisplay.ppText, position.AddS(0, (120+offset)*ppScale), length, ppScale, color, vector.TopLeft)

@@ -46,5 +46,5 @@ type StrainPeaks struct {
 }
 
 type PPv2Results struct {
-	Aim, Speed, Acc, Flashlight, Total float64
+	Aim, Speed, Acc, Flashlight, Reading, Total float64
 }

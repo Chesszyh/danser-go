@@ -125,6 +125,8 @@ type OsuRuleSet struct {
 	endListener   endListener
 	failListener  failListener
 	clickListener clickListener
+
+	officialReplays map[*graphics.Cursor]*officialReplayState
 }
 
 func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs []*difficulty.Difficulty) *OsuRuleSet {
@@ -133,6 +135,7 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 	ruleset := new(OsuRuleSet)
 	ruleset.beatMap = beatMap
 	ruleset.oppDiffs = make(map[string][]api.Attributes)
+	ruleset.officialReplays = make(map[*graphics.Cursor]*officialReplayState)
 
 	log.Println("Using pp calc version", performance.GetDifficultyCalculator().GetVersionMessage())
 
@@ -287,6 +290,8 @@ func NewOsuRuleset(beatMap *beatmap.BeatMap, cursors []*graphics.Cursor, diffs [
 }
 
 func (set *OsuRuleSet) Update(time int64) {
+	set.updateOfficialReplays(time)
+
 	if len(set.processed) > 0 {
 		for i := 0; i < len(set.processed); i++ {
 			g := set.processed[i]
@@ -318,7 +323,11 @@ func (set *OsuRuleSet) Update(time int64) {
 		}
 	}
 
-	for _, subSet := range set.cursors {
+	for cursor, subSet := range set.cursors {
+		if _, official := set.officialReplays[cursor]; official {
+			continue
+		}
+
 		subSet.hp.Update(time)
 	}
 
@@ -484,6 +493,10 @@ func (set *OsuRuleSet) UpdatePostFor(cursor *graphics.Cursor, time int64, proces
 }
 
 func (set *OsuRuleSet) SendResult(cursor *graphics.Cursor, judgementResult JudgementResult) {
+	if _, official := set.officialReplays[cursor]; official {
+		return
+	}
+
 	subSet := set.cursors[cursor]
 
 	if judgementResult.HitResult == Ignore || judgementResult.HitResult == PositionalMiss {
@@ -765,6 +778,10 @@ func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 }
 
 func (set *OsuRuleSet) PlayerStopped(cursor *graphics.Cursor, time int64) {
+	if _, official := set.officialReplays[cursor]; official {
+		return
+	}
+
 	subSet := set.cursors[cursor]
 
 	// Let's believe in hp system. 1ms just in case for slider calculation inconsistencies
@@ -855,6 +872,10 @@ func (set *OsuRuleSet) GetScore(cursor *graphics.Cursor) Score {
 }
 
 func (set *OsuRuleSet) GetHP(cursor *graphics.Cursor) float64 {
+	if official := set.officialReplays[cursor]; official != nil {
+		return official.health
+	}
+
 	subSet := set.cursors[cursor]
 	return subSet.hp.GetHealth()
 }

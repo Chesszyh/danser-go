@@ -1,6 +1,7 @@
 package dance
 
 import (
+	"context"
 	"fmt"
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
@@ -10,6 +11,7 @@ import (
 	"github.com/wieku/danser-go/app/dance/spinners"
 	"github.com/wieku/danser-go/app/graphics"
 	"github.com/wieku/danser-go/app/rulesets/osu"
+	"github.com/wieku/danser-go/app/rulesets/osu/lazer"
 	"github.com/wieku/danser-go/app/settings"
 	"github.com/wieku/danser-go/framework/env"
 	"github.com/wieku/danser-go/framework/files"
@@ -62,12 +64,13 @@ func NewSubControl() *subControl {
 }
 
 type ReplayController struct {
-	bMap        *beatmap.BeatMap
-	replays     []RpData
-	cursors     []*graphics.Cursor
-	controllers []*subControl
-	ruleset     *osu.OsuRuleSet
-	lastTime    float64
+	bMap          *beatmap.BeatMap
+	replays       []RpData
+	cursors       []*graphics.Cursor
+	controllers   []*subControl
+	ruleset       *osu.OsuRuleSet
+	officialTrace *lazer.ReplayResponse
+	lastTime      float64
 }
 
 func NewReplayController() Controller {
@@ -178,6 +181,21 @@ func (controller *ReplayController) SetBeatMap(beatMap *beatmap.BeatMap) {
 	}
 
 	settings.PLAYERS = len(controller.replays)
+
+	if localReplay && len(controller.controllers) == 1 && controller.controllers[0].diff.CheckModActive(difficulty.Lazer) && settings.Gameplay.LazerRulesEngine == "official" {
+		if controller.controllers[0].modifiedMods {
+			panic("Official osu!lazer rules require the replay's original mods; remove -mods and -mods2 overrides")
+		}
+
+		beatmapPath := filepath.Join(settings.General.GetSongsDir(), beatMap.Dir, beatMap.File)
+		var err error
+		controller.officialTrace, err = lazer.Rejudge(context.Background(), beatmapPath, settings.REPLAY)
+		if err != nil {
+			panic(err)
+		}
+
+		log.Printf("Using official osu!lazer rules from %s", controller.officialTrace.Engine.OsuSourceRevision)
+	}
 }
 
 func organizeReplays() {
@@ -383,6 +401,12 @@ func (controller *ReplayController) InitCursors() {
 	}
 
 	controller.ruleset = osu.NewOsuRuleset(controller.bMap, controller.cursors, diffs)
+
+	if controller.officialTrace != nil {
+		if err := controller.ruleset.UseOfficialLazerReplay(controller.cursors[0], controller.officialTrace); err != nil {
+			panic(err)
+		}
+	}
 
 	for i, c := range controller.controllers {
 		if controller.replays[i].ModsV.Active(difficulty.Relax) {
