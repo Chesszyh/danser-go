@@ -20,3 +20,7 @@ danser-core.*
 libdanser*
 api.txt
 *.osr
+/lazer-rules-host/
+/danser-test
+/tools/lazer-rules-host/bin/
+/tools/lazer-rules-host/obj/

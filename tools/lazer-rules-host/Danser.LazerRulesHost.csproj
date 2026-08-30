@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>danser-lazer-rules</AssemblyName>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../third_party/osu/osu.Game/osu.Game.csproj" />
+    <ProjectReference Include="../../third_party/osu/osu.Game.Rulesets.Osu/osu.Game.Rulesets.Osu.csproj" />
+  </ItemGroup>
+
+  <Target Name="AddOsuSourceRevision" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git -C &quot;$(MSBuildProjectDirectory)/../../third_party/osu&quot; rev-parse HEAD"
+          ConsoleToMSBuild="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="OsuSourceRevision" />
+    </Exec>
+    <ItemGroup>
+      <AssemblyMetadata Include="OsuSourceRevision" Value="$(OsuSourceRevision)" />
+    </ItemGroup>
+  </Target>
+</Project>
