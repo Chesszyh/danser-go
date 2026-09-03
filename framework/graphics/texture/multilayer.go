@@ -1,7 +1,6 @@
 package texture
 
 import (
-	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/wieku/danser-go/framework/goroutines"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"runtime"
@@ -55,7 +54,7 @@ func (texture *TextureMultiLayer) NewLayer() {
 
 	for level := int32(0); level < mMaps; level++ {
 		div := int32(1 << uint(level))
-		gl.CopyImageSubData(texture.store.id, gl.TEXTURE_2D_ARRAY, level, 0, 0, 0, dstStore.id, gl.TEXTURE_2D_ARRAY, level, 0, 0, 0, dstStore.width/div, dstStore.height/div, layers-1)
+		copyTextureLayers(texture.store, dstStore, level, dstStore.width/div, dstStore.height/div, layers-1)
 	}
 
 	texture.store.Dispose()
@@ -69,7 +68,7 @@ func (texture *TextureMultiLayer) SetData(x, y, width, height, layer int, data [
 
 func (texture *TextureMultiLayer) GenerateMipmaps() {
 	if texture.store.mipmaps > 1 {
-		gl.GenerateTextureMipmap(texture.store.id)
+		generateTextureMipmaps(texture.store.id)
 	}
 }
 

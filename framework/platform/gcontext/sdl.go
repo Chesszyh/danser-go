@@ -3,6 +3,7 @@ package gcontext
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -38,7 +39,9 @@ var (
 
 func Initialize(offscreen bool) error {
 	libPath := filepath.Join(env.LibDir(), "SDL3.dll")
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS == "darwin" {
+		libPath = macOSSDLLibraryPath()
+	} else if runtime.GOOS != "windows" {
 		libPath = filepath.Join(env.LibDir(), "libSDL3.so")
 	}
 
@@ -63,6 +66,22 @@ func Initialize(offscreen bool) error {
 	return sdl.Init(sdl.INIT_VIDEO) // preinitialize to get access to display info - it will be reinitialized during window creation
 }
 
+func macOSSDLLibraryPath() string {
+	candidates := []string{
+		filepath.Join(env.LibDir(), "libSDL3.dylib"),
+		filepath.Join(env.LibDir(), ".deps", "macos", "lib", "libSDL3.dylib"),
+		filepath.Clean(filepath.Join(env.LibDir(), "..", "Frameworks", "libSDL3.dylib")),
+	}
+
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return candidates[0]
+}
+
 func SDLCreateWindow(width, height int, title string, props OptionalProps) {
 
 	sdl.QuitSubSystem(sdl.INIT_VIDEO)
@@ -84,9 +103,7 @@ func SDLCreateWindow(width, height int, title string, props OptionalProps) {
 	}
 
 	_ = sdl.GL_SetAttribute(sdl.GL_FRAMEBUFFER_SRGB_CAPABLE, 1)
-	_ = sdl.GL_SetAttribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
-	_ = sdl.GL_SetAttribute(sdl.GL_CONTEXT_MINOR_VERSION, 3)
-	_ = sdl.GL_SetAttribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
+	configureGLContext()
 
 	if props.BuiltinMSAA {
 		_ = sdl.GL_SetAttribute(sdl.GL_MULTISAMPLEBUFFERS, 1)

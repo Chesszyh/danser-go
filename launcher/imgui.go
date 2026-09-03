@@ -548,7 +548,7 @@ func DrawImgui() {
 			} else {
 				cId := cmd.TexID()
 				if cId != lastBound {
-					gl.BindTextureUnit(0, uint32(cId))
+					texture.BindTextureUnit(gl.TEXTURE_2D_ARRAY, 0, uint32(cId))
 
 					lastBound = cId
 				}

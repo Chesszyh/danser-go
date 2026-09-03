@@ -37,15 +37,15 @@ func NewFrame(width, height int, smooth, depth bool) *Framebuffer {
 
 	f.tex = texture.NewTextureSingle(width, height, 0)
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
 
 	if depth {
-		gl.CreateRenderbuffers(1, &f.depth)
+		createRenderbuffer(&f.depth)
 
-		gl.NamedRenderbufferStorage(f.depth, gl.DEPTH_COMPONENT, int32(width), int32(height))
-		gl.NamedFramebufferRenderbuffer(f.handle, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, f.depth)
+		setRenderbufferStorage(f.depth, gl.DEPTH_COMPONENT, int32(width), int32(height))
+		attachFramebufferRenderbuffer(f.handle, gl.DEPTH_ATTACHMENT, f.depth)
 	}
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
@@ -61,9 +61,9 @@ func NewFrameF(width, height int) *Framebuffer {
 	f.tex = texture.NewTextureSingleFormat(width, height, texture.RGBA32F, 0)
 	f.tex.SetFiltering(texture.Filtering.Nearest, texture.Filtering.Nearest)
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -75,9 +75,9 @@ func NewFrameLayer(texture texture.Texture, layer int) *Framebuffer {
 	f.width = int(texture.GetWidth())
 	f.height = int(texture.GetHeight())
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, texture.GetID(), 0, int32(layer))
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, texture.GetID(), 0, int32(layer))
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -91,9 +91,9 @@ func NewFrameDepth(width, height int, smooth bool) *Framebuffer {
 
 	f.tex = texture.NewTextureSingleFormat(width, height, texture.Depth, 0)
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.DEPTH_ATTACHMENT, f.tex.GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.DEPTH_ATTACHMENT, f.tex.GetID(), 0, 0)
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -106,16 +106,16 @@ func NewFrameMultisample(width, height int, samples int) *Framebuffer {
 	f.height = height
 	f.multisampled = true
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.CreateRenderbuffers(1, &f.texRenderbuffer)
-	gl.NamedRenderbufferStorageMultisample(f.texRenderbuffer, int32(samples), texture.RGBA.InternalFormat(), int32(width), int32(height))
-	gl.NamedFramebufferRenderbuffer(f.handle, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, f.texRenderbuffer)
+	createRenderbuffer(&f.texRenderbuffer)
+	setRenderbufferStorageMultisample(f.texRenderbuffer, int32(samples), texture.RGBA.InternalFormat(), int32(width), int32(height))
+	attachFramebufferRenderbuffer(f.handle, gl.COLOR_ATTACHMENT0, f.texRenderbuffer)
 
 	f.tex = texture.NewTextureSingle(width, height, 0)
 
-	gl.CreateFramebuffers(1, &f.helperHandle)
-	gl.NamedFramebufferTextureLayer(f.helperHandle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
+	createFramebuffer(&f.helperHandle)
+	attachFramebufferTextureLayer(f.helperHandle, gl.COLOR_ATTACHMENT0, f.tex.GetID(), 0, 0)
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -128,16 +128,16 @@ func NewFrameMultisampleScreen(width, height int, depth bool, samples int) *Fram
 	f.height = height
 	f.multisampled = true
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.CreateRenderbuffers(1, &f.texRenderbuffer)
-	gl.NamedRenderbufferStorageMultisample(f.texRenderbuffer, int32(samples), texture.RGBA.InternalFormat(), int32(width), int32(height))
-	gl.NamedFramebufferRenderbuffer(f.handle, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, f.texRenderbuffer)
+	createRenderbuffer(&f.texRenderbuffer)
+	setRenderbufferStorageMultisample(f.texRenderbuffer, int32(samples), texture.RGBA.InternalFormat(), int32(width), int32(height))
+	attachFramebufferRenderbuffer(f.handle, gl.COLOR_ATTACHMENT0, f.texRenderbuffer)
 
 	if depth {
-		gl.CreateRenderbuffers(1, &f.depth)
-		gl.NamedRenderbufferStorageMultisample(f.depth, int32(samples), gl.DEPTH_COMPONENT, int32(width), int32(height))
-		gl.NamedFramebufferRenderbuffer(f.handle, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, f.depth)
+		createRenderbuffer(&f.depth)
+		setRenderbufferStorageMultisample(f.depth, int32(samples), gl.DEPTH_COMPONENT, int32(width), int32(height))
+		attachFramebufferRenderbuffer(f.handle, gl.DEPTH_ATTACHMENT, f.depth)
 	}
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
@@ -154,15 +154,15 @@ func NewFrameYUV(width, height int) *Framebuffer {
 	f.texs = append(f.texs, texture.NewTextureSingleFormat(width, height, texture.Red, 0))
 	f.texs = append(f.texs, texture.NewTextureSingleFormat(width, height, texture.Red, 0))
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.texs[0].GetID(), 0, 0)
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT1, f.texs[1].GetID(), 0, 0)
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT2, f.texs[2].GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.texs[0].GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT1, f.texs[1].GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT2, f.texs[2].GetID(), 0, 0)
 
 	attchs := []uint32{gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2}
 
-	gl.NamedFramebufferDrawBuffers(f.handle, 3, &attchs[0])
+	setFramebufferDrawBuffers(f.handle, attchs)
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -177,14 +177,14 @@ func NewFrameYUVSmall(width, height int) *Framebuffer {
 	f.texs = append(f.texs, texture.NewTextureSingleFormat(width, height, texture.RG, 0))
 	f.texs = append(f.texs, texture.NewTextureSingleFormat(width, height, texture.Red, 0))
 
-	gl.CreateFramebuffers(1, &f.handle)
+	createFramebuffer(&f.handle)
 
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.texs[0].GetID(), 0, 0)
-	gl.NamedFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT1, f.texs[1].GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT0, f.texs[0].GetID(), 0, 0)
+	attachFramebufferTextureLayer(f.handle, gl.COLOR_ATTACHMENT1, f.texs[1].GetID(), 0, 0)
 
 	attchs := []uint32{gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1}
 
-	gl.NamedFramebufferDrawBuffers(f.handle, 2, &attchs[0])
+	setFramebufferDrawBuffers(f.handle, attchs)
 
 	runtime.SetFinalizer(f, (*Framebuffer).Dispose)
 
@@ -249,13 +249,7 @@ func (f *Framebuffer) Unbind() {
 			hHandle = handle
 		}
 
-		gl.NamedFramebufferReadBuffer(f.handle, gl.COLOR_ATTACHMENT0)
-
-		if hHandle > 0 {
-			gl.NamedFramebufferDrawBuffer(hHandle, gl.COLOR_ATTACHMENT0)
-		}
-
-		gl.BlitNamedFramebuffer(f.handle, hHandle, 0, 0, int32(f.width), int32(f.height), 0, 0, int32(f.width), int32(f.height), gl.COLOR_BUFFER_BIT, gl.LINEAR)
+		resolveFramebuffer(f.handle, hHandle, int32(f.width), int32(f.height))
 	}
 
 	if handle != 0 {
@@ -283,24 +277,26 @@ func (f *Framebuffer) GetHeight() int {
 
 func (f *Framebuffer) ClearColor(r, g, b, a float32) {
 	col := []float32{r, g, b, a}
-	gl.ClearNamedFramebufferfv(f.handle, gl.COLOR, 0, &col[0])
+	clearFramebuffer(f.handle, gl.COLOR, 0, &col[0])
 }
 
 func (f *Framebuffer) ClearColorI(index int, r, g, b, a float32) {
 	col := []float32{r, g, b, a}
-	gl.ClearNamedFramebufferfv(f.handle, gl.COLOR, int32(index), &col[0])
+	clearFramebuffer(f.handle, gl.COLOR, int32(index), &col[0])
 }
 
 func (f *Framebuffer) ClearColorM(color color2.Color) {
-	gl.ClearNamedFramebufferfv(f.handle, gl.COLOR, 0, &color.ToArray()[0])
+	glColor := color.ToArray()
+	clearFramebuffer(f.handle, gl.COLOR, 0, &glColor[0])
 }
 
 func (f *Framebuffer) ClearColorIM(index int, color color2.Color) {
-	gl.ClearNamedFramebufferfv(f.handle, gl.COLOR, int32(index), &color.ToArray()[0])
+	glColor := color.ToArray()
+	clearFramebuffer(f.handle, gl.COLOR, int32(index), &glColor[0])
 }
 
 func (f *Framebuffer) ClearDepthV(v float32) {
-	gl.ClearNamedFramebufferfv(f.handle, gl.DEPTH, 0, &v)
+	clearFramebuffer(f.handle, gl.DEPTH, 0, &v)
 }
 
 func (f *Framebuffer) ClearDepth() {

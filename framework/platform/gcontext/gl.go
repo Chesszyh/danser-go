@@ -11,6 +11,7 @@ import (
 	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/go-gl/gl/v3.3-core/gl"
 
+	"github.com/wieku/danser-go/framework/graphics/glcaps"
 	"github.com/wieku/danser-go/framework/graphics/hacks"
 )
 
@@ -23,15 +24,24 @@ func GLInit(debugLogs bool, additionalExtensions ...string) error {
 		return err
 	}
 
-	err = extensionCheck(additionalExtensions)
-	if err != nil {
-		return err
-	}
-
 	glVendor := C.GoString((*C.char)(unsafe.Pointer(gl.GetString(gl.VENDOR))))
 	glRenderer := C.GoString((*C.char)(unsafe.Pointer(gl.GetString(gl.RENDERER))))
 	glVersion := C.GoString((*C.char)(unsafe.Pointer(gl.GetString(gl.VERSION))))
 	glslVersion := C.GoString((*C.char)(unsafe.Pointer(gl.GetString(gl.SHADING_LANGUAGE_VERSION))))
+
+	var major, minor int32
+	gl.GetIntegerv(gl.MAJOR_VERSION, &major)
+	gl.GetIntegerv(gl.MINOR_VERSION, &minor)
+
+	capabilities := glcaps.Detect(int(major), int(minor), sdl.GL_ExtensionSupported)
+	glcaps.Set(capabilities)
+
+	log.Println("GL Capabilities:", capabilities)
+
+	err = extensionCheck(additionalExtensions)
+	if err != nil {
+		return err
+	}
 
 	lVendor := strings.ToLower(glVendor)
 
@@ -69,7 +79,7 @@ func GLInit(debugLogs bool, additionalExtensions ...string) error {
 	log.Println("GL Extensions:", extensions)
 	log.Println("OpenGL initialized!")
 
-	if debugLogs {
+	if debugLogs && capabilities.DebugOutput {
 		gl.Enable(gl.DEBUG_OUTPUT)
 		gl.DebugMessageCallback(func(
 			source uint32,
@@ -89,13 +99,7 @@ func GLInit(debugLogs bool, additionalExtensions ...string) error {
 }
 
 func extensionCheck(additionalExtensions []string) (ret error) {
-	extensions := []string{
-		"GL_ARB_clear_texture",
-		"GL_ARB_direct_state_access",
-		"GL_ARB_texture_storage",
-		"GL_ARB_vertex_attrib_binding",
-		"GL_ARB_buffer_storage",
-	}
+	extensions := make([]string, 0, len(additionalExtensions))
 
 	if additionalExtensions != nil {
 		extensions = append(extensions, additionalExtensions...)

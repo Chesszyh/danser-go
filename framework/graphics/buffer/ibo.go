@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/wieku/danser-go/framework/goroutines"
+	"github.com/wieku/danser-go/framework/graphics/glcaps"
 	"github.com/wieku/danser-go/framework/graphics/hacks"
 	"github.com/wieku/danser-go/framework/graphics/history"
 	"github.com/wieku/danser-go/framework/profiler"
@@ -27,9 +28,9 @@ func NewIndexBufferObject(maxIndices int) *IndexBufferObject {
 	ibo.xtype = gl.UNSIGNED_SHORT
 	ibo.xsize = 2
 
-	gl.CreateBuffers(1, &ibo.handle)
+	createBuffer(&ibo.handle)
 
-	gl.NamedBufferData(ibo.handle, maxIndices*2, gl.Ptr(nil), gl.DYNAMIC_DRAW)
+	setBufferData(ibo.handle, maxIndices*2, gl.Ptr(nil), gl.DYNAMIC_DRAW)
 
 	runtime.SetFinalizer(ibo, (*IndexBufferObject).Dispose)
 
@@ -42,9 +43,9 @@ func NewIndexBufferObjectInt(maxIndices int) *IndexBufferObject {
 	ibo.xtype = gl.UNSIGNED_INT
 	ibo.xsize = 4
 
-	gl.CreateBuffers(1, &ibo.handle)
+	createBuffer(&ibo.handle)
 
-	gl.NamedBufferData(ibo.handle, maxIndices*4, gl.Ptr(nil), gl.DYNAMIC_DRAW)
+	setBufferData(ibo.handle, maxIndices*4, gl.Ptr(nil), gl.DYNAMIC_DRAW)
 
 	runtime.SetFinalizer(ibo, (*IndexBufferObject).Dispose)
 
@@ -65,7 +66,7 @@ func (ibo *IndexBufferObject) SetData(offset int, data []uint16) {
 		panic(fmt.Sprintf("Data exceeds IBO's capacity. Data length: %d, offset: %d, capacity: %d", len(data), offset, ibo.capacity))
 	}
 
-	gl.NamedBufferSubData(ibo.handle, offset, len(data)*2, gl.Ptr(data))
+	setBufferSubData(ibo.handle, offset*2, len(data)*2, gl.Ptr(data))
 }
 
 func (ibo *IndexBufferObject) SetDataI(offset int, data []uint32) {
@@ -77,7 +78,7 @@ func (ibo *IndexBufferObject) SetDataI(offset int, data []uint32) {
 		panic(fmt.Sprintf("Data exceeds IBO's capacity. Data length: %d, offset: %d, capacity: %d", len(data), offset, ibo.capacity))
 	}
 
-	gl.NamedBufferSubData(ibo.handle, offset, len(data)*4, gl.Ptr(data))
+	setBufferSubData(ibo.handle, offset*4, len(data)*4, gl.Ptr(data))
 }
 
 func (ibo *IndexBufferObject) Draw() {
@@ -107,7 +108,11 @@ func (ibo *IndexBufferObject) DrawPartInstanced(offset, length, baseInstance, in
 	profiler.AddStat(profiler.VerticesDrawn, int64(length*instanceCount))
 	profiler.IncrementStat(profiler.DrawCalls)
 
-	gl.DrawElementsInstancedBaseInstance(gl.TRIANGLES, int32(length), ibo.xtype, gl.PtrOffset(offset*ibo.xsize), int32(instanceCount), uint32(baseInstance))
+	if glcaps.Current().BaseInstance {
+		gl.DrawElementsInstancedBaseInstance(gl.TRIANGLES, int32(length), ibo.xtype, gl.PtrOffset(offset*ibo.xsize), int32(instanceCount), uint32(baseInstance))
+	} else {
+		gl.DrawElementsInstanced(gl.TRIANGLES, int32(length), ibo.xtype, gl.PtrOffset(offset*ibo.xsize), int32(instanceCount))
+	}
 
 	if hacks.IsIntel {
 		gl.Flush()

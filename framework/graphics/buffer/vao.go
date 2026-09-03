@@ -2,21 +2,33 @@ package buffer
 
 import (
 	"fmt"
+	"runtime"
+
 	"github.com/go-gl/gl/v3.3-core/gl"
+
 	"github.com/wieku/danser-go/framework/goroutines"
 	"github.com/wieku/danser-go/framework/graphics/attribute"
+	"github.com/wieku/danser-go/framework/graphics/glcaps"
 	"github.com/wieku/danser-go/framework/graphics/hacks"
 	"github.com/wieku/danser-go/framework/graphics/history"
 	"github.com/wieku/danser-go/framework/graphics/shader"
 	"github.com/wieku/danser-go/framework/profiler"
-	"runtime"
 )
 
+type attributeBinding struct {
+	location   uint32
+	components int32
+	typeID     uint32
+	normalized bool
+	offset     int
+}
+
 type bufferHolder struct {
-	buffer  StreamingBuffer
-	divisor int
-	format  attribute.Format
-	binding int
+	buffer     StreamingBuffer
+	divisor    int
+	format     attribute.Format
+	binding    int
+	attributes []attributeBinding
 }
 
 type VertexArrayObject struct {
@@ -30,13 +42,20 @@ type VertexArrayObject struct {
 	disposed bool
 
 	ibo *IndexBufferObject
+
+	legacyBaseInstance int
 }
 
 func NewVertexArrayObject() *VertexArrayObject {
 	vao := new(VertexArrayObject)
 	vao.buffers = make(map[string]*bufferHolder)
+	vao.legacyBaseInstance = -1
 
-	gl.CreateVertexArrays(1, &vao.handle)
+	if vao.hasModernBinding() {
+		gl.CreateVertexArrays(1, &vao.handle)
+	} else {
+		gl.GenVertexArrays(1, &vao.handle)
+	}
 
 	runtime.SetFinalizer(vao, (*VertexArrayObject).Dispose)
 
@@ -75,13 +94,23 @@ func (vao *VertexArrayObject) AddPersistentVBO(name string, maxVertices int, div
 		panic(fmt.Sprintf("VBO with name \"%s\" already exists", name))
 	}
 
-	holder := &bufferHolder{
-		buffer:  NewPersistentBufferObject(maxVertices / 100 * format.Size() / 4),
-		divisor: divisor,
-		format:  format,
+	var streamingBuffer StreamingBuffer
+	if glcaps.Current().BufferStorage {
+		streamingBuffer = NewPersistentBufferObject(maxVertices / 100 * format.Size() / 4)
+	} else {
+		streamingBuffer = NewVertexBufferObject(maxVertices*format.Size()/4, true, StreamDraw)
 	}
 
-	holder.buffer.Resize(maxVertices * format.Size() / 4)
+	holder := &bufferHolder{
+		buffer:  streamingBuffer,
+		divisor: divisor,
+		format:  format,
+		binding: -1,
+	}
+
+	if holder.buffer.Capacity() != maxVertices*format.Size()/4 {
+		holder.buffer.Resize(maxVertices * format.Size() / 4)
+	}
 
 	if divisor == 0 {
 		vao.capacity = maxVertices
@@ -114,7 +143,11 @@ func (vao *VertexArrayObject) Resize(name string, maxVertices int) {
 
 			// If we have persistent buffer object that was bound we want to bind it again because new object was created on resize
 			if _, ok := holder.buffer.(*PersistentBufferObject); ok && holder.binding >= 0 {
-				gl.VertexArrayVertexBuffer(vao.handle, uint32(holder.binding), holder.buffer.GetID(), 0, int32(holder.format.Size()))
+				if vao.hasModernBinding() {
+					gl.VertexArrayVertexBuffer(vao.handle, uint32(holder.binding), holder.buffer.GetID(), 0, int32(holder.format.Size()))
+				} else {
+					vao.configureLegacyBaseInstance(vao.legacyBaseInstance)
+				}
 			}
 		}
 
@@ -127,31 +160,46 @@ func (vao *VertexArrayObject) Resize(name string, maxVertices int) {
 func (vao *VertexArrayObject) Attach(s *shader.RShader) {
 	var index int
 	for _, holder := range vao.buffers {
+		holder.attributes = holder.attributes[:0]
 		var offset int
 		for _, attr := range holder.format {
 			location := s.GetAttributeInfo(attr.Name).Location
 
-			gl.EnableVertexArrayAttrib(vao.handle, uint32(location))
+			holder.attributes = append(holder.attributes, attributeBinding{
+				location:   uint32(location),
+				components: int32(attr.Type.Components()),
+				typeID:     uint32(attr.Type.InternalType()),
+				normalized: attr.Type.Normalize(),
+				offset:     offset,
+			})
 
-			gl.VertexArrayAttribBinding(vao.handle, uint32(location), uint32(index))
-
-			gl.VertexArrayAttribFormat(
-				vao.handle,
-				uint32(location),
-				int32(attr.Type.Components()),
-				uint32(attr.Type.InternalType()),
-				attr.Type.Normalize(),
-				uint32(offset),
-			)
+			if vao.hasModernBinding() {
+				gl.EnableVertexArrayAttrib(vao.handle, uint32(location))
+				gl.VertexArrayAttribBinding(vao.handle, uint32(location), uint32(index))
+				gl.VertexArrayAttribFormat(
+					vao.handle,
+					uint32(location),
+					int32(attr.Type.Components()),
+					uint32(attr.Type.InternalType()),
+					attr.Type.Normalize(),
+					uint32(offset),
+				)
+			}
 
 			offset += attr.Type.Size()
 		}
 
 		holder.binding = index
-		gl.VertexArrayVertexBuffer(vao.handle, uint32(index), holder.buffer.GetID(), 0, int32(holder.format.Size()))
-		gl.VertexArrayBindingDivisor(vao.handle, uint32(index), uint32(holder.divisor))
+		if vao.hasModernBinding() {
+			gl.VertexArrayVertexBuffer(vao.handle, uint32(index), holder.buffer.GetID(), 0, int32(holder.format.Size()))
+			gl.VertexArrayBindingDivisor(vao.handle, uint32(index), uint32(holder.divisor))
+		}
 
 		index++
+	}
+
+	if !vao.hasModernBinding() {
+		vao.configureLegacyBaseInstance(0)
 	}
 }
 
@@ -187,6 +235,7 @@ func (vao *VertexArrayObject) UnmapVBO(name string, offset int, size int) {
 }
 
 func (vao *VertexArrayObject) Draw() {
+	vao.prepareBaseInstance(0)
 	if vao.ibo != nil {
 		vao.check(0, 0)
 		vao.ibo.Draw()
@@ -196,6 +245,7 @@ func (vao *VertexArrayObject) Draw() {
 }
 
 func (vao *VertexArrayObject) DrawInstanced(baseInstance, instanceCount int) {
+	vao.prepareBaseInstance(baseInstance)
 	if vao.ibo != nil {
 		vao.check(0, 0)
 		vao.ibo.DrawInstanced(baseInstance, instanceCount)
@@ -205,6 +255,7 @@ func (vao *VertexArrayObject) DrawInstanced(baseInstance, instanceCount int) {
 }
 
 func (vao *VertexArrayObject) DrawPart(offset, length int) {
+	vao.prepareBaseInstance(0)
 	if vao.ibo != nil {
 		vao.check(0, 0)
 		vao.ibo.DrawPart(offset, length)
@@ -223,6 +274,7 @@ func (vao *VertexArrayObject) DrawPart(offset, length int) {
 }
 
 func (vao *VertexArrayObject) DrawPartInstanced(offset, length, baseInstance, instanceCount int) {
+	vao.prepareBaseInstance(baseInstance)
 	if vao.ibo != nil {
 		vao.check(0, 0)
 		vao.ibo.DrawPartInstanced(offset, length, baseInstance, instanceCount)
@@ -232,7 +284,11 @@ func (vao *VertexArrayObject) DrawPartInstanced(offset, length, baseInstance, in
 		profiler.AddStat(profiler.VerticesDrawn, int64(length*instanceCount))
 		profiler.IncrementStat(profiler.DrawCalls)
 
-		gl.DrawArraysInstancedBaseInstance(gl.TRIANGLES, int32(offset), int32(length), int32(instanceCount), uint32(baseInstance))
+		if glcaps.Current().BaseInstance {
+			gl.DrawArraysInstancedBaseInstance(gl.TRIANGLES, int32(offset), int32(length), int32(instanceCount), uint32(baseInstance))
+		} else {
+			gl.DrawArraysInstanced(gl.TRIANGLES, int32(offset), int32(length), int32(instanceCount))
+		}
 
 		if hacks.IsIntel {
 			gl.Flush()
@@ -249,6 +305,45 @@ func (vao *VertexArrayObject) check(offset, length int) {
 	if offset+length > vao.capacity {
 		panic(fmt.Sprintf("Draw exceeds VAO's capacity. Draw length: %d, offset: %d, capacity: %d", length, offset, vao.capacity))
 	}
+}
+
+func (vao *VertexArrayObject) hasModernBinding() bool {
+	capabilities := glcaps.Current()
+	return capabilities.DirectStateAccess && capabilities.VertexAttribBinding
+}
+
+func (vao *VertexArrayObject) prepareBaseInstance(baseInstance int) {
+	if vao.hasModernBinding() || vao.legacyBaseInstance == baseInstance {
+		return
+	}
+
+	vao.configureLegacyBaseInstance(baseInstance)
+}
+
+func (vao *VertexArrayObject) configureLegacyBaseInstance(baseInstance int) {
+	var previousVAO, previousArrayBuffer int32
+	gl.GetIntegerv(gl.VERTEX_ARRAY_BINDING, &previousVAO)
+	gl.GetIntegerv(gl.ARRAY_BUFFER_BINDING, &previousArrayBuffer)
+	gl.BindVertexArray(vao.handle)
+
+	for _, holder := range vao.buffers {
+		gl.BindBuffer(gl.ARRAY_BUFFER, holder.buffer.GetID())
+
+		baseOffset := 0
+		if holder.divisor > 0 {
+			baseOffset = baseInstance * holder.format.Size()
+		}
+
+		for _, attr := range holder.attributes {
+			gl.EnableVertexAttribArray(attr.location)
+			gl.VertexAttribPointer(attr.location, attr.components, attr.typeID, attr.normalized, int32(holder.format.Size()), gl.PtrOffset(baseOffset+attr.offset))
+			gl.VertexAttribDivisor(attr.location, uint32(holder.divisor))
+		}
+	}
+
+	gl.BindBuffer(gl.ARRAY_BUFFER, uint32(previousArrayBuffer))
+	gl.BindVertexArray(uint32(previousVAO))
+	vao.legacyBaseInstance = baseInstance
 }
 
 func (vao *VertexArrayObject) Bind() {
@@ -302,5 +397,13 @@ func (vao *VertexArrayObject) Dispose() {
 func (vao *VertexArrayObject) AttachIBO(ibo *IndexBufferObject) {
 	ibo.attached = true
 	vao.ibo = ibo
-	gl.VertexArrayElementBuffer(vao.handle, ibo.handle)
+	if vao.hasModernBinding() {
+		gl.VertexArrayElementBuffer(vao.handle, ibo.handle)
+	} else {
+		var previousVAO int32
+		gl.GetIntegerv(gl.VERTEX_ARRAY_BINDING, &previousVAO)
+		gl.BindVertexArray(vao.handle)
+		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo.handle)
+		gl.BindVertexArray(uint32(previousVAO))
+	}
 }

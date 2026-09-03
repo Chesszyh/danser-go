@@ -50,7 +50,7 @@ type textureStore struct {
 func newStore(layerNum, width, height int, format Format, mipmaps int) *textureStore {
 	store := new(textureStore)
 
-	gl.CreateTextures(gl.TEXTURE_2D_ARRAY, 1, &store.id)
+	createTexture(gl.TEXTURE_2D_ARRAY, &store.id)
 
 	store.layers = int32(layerNum)
 	store.width = int32(width)
@@ -62,11 +62,11 @@ func newStore(layerNum, width, height int, format Format, mipmaps int) *textureS
 	}
 	store.mipmaps = int32(mipmaps)
 
-	gl.TextureStorage3D(store.id, store.mipmaps, format.InternalFormat(), store.width, store.height, store.layers)
-	gl.TextureParameteri(store.id, gl.TEXTURE_BASE_LEVEL, 0)
-	gl.TextureParameteri(store.id, gl.TEXTURE_MAX_LEVEL, store.mipmaps-1)
-	gl.TextureParameteri(store.id, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-	gl.TextureParameteri(store.id, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	allocateTextureStorage(store)
+	setTextureParameter(store.id, gl.TEXTURE_BASE_LEVEL, 0)
+	setTextureParameter(store.id, gl.TEXTURE_MAX_LEVEL, store.mipmaps-1)
+	setTextureParameter(store.id, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	setTextureParameter(store.id, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
 	if mipmaps > 1 {
 		store.SetFiltering(Filtering.MipMap, Filtering.Linear)
@@ -85,17 +85,17 @@ func (store *textureStore) SetData(x, y, width, height, layer int, data []uint8,
 	amdHack := store.binding == 0 && hacks.IsOldAMD
 
 	if amdHack {
-		gl.BindTextureUnit(11, store.id)
+		BindTextureUnit(gl.TEXTURE_2D_ARRAY, 11, store.id)
 	}
 
-	gl.TextureSubImage3D(store.id, 0, int32(x), int32(y), int32(layer), int32(width), int32(height), 1, store.format.Format(), store.format.Type(), gl.Ptr(data))
+	setTextureData(store, x, y, width, height, layer, gl.Ptr(data))
 
 	if amdHack {
-		gl.BindTextureUnit(uint32(store.binding), store.id)
+		BindTextureUnit(gl.TEXTURE_2D_ARRAY, store.binding, store.id)
 	}
 
 	if store.mipmaps > 1 && generateMipmaps {
-		gl.GenerateTextureMipmap(store.id)
+		generateTextureMipmaps(store.id)
 	}
 }
 
@@ -103,46 +103,44 @@ func (store *textureStore) SetDataBuf(x, y, width, height, layer int, rowWidth i
 	amdHack := store.binding == 0 && hacks.IsOldAMD
 
 	if amdHack {
-		gl.BindTextureUnit(11, store.id)
+		BindTextureUnit(gl.TEXTURE_2D_ARRAY, 11, store.id)
 	}
 
 	gl.PixelStorei(gl.UNPACK_ROW_LENGTH, int32(rowWidth))
 
-	gl.TextureSubImage3D(store.id, 0, int32(x), int32(y), int32(layer), int32(width), int32(height), 1, store.format.Format(), store.format.Type(), gl.Ptr(ptr))
+	setTextureData(store, x, y, width, height, layer, gl.Ptr(ptr))
 
 	gl.PixelStorei(gl.UNPACK_ROW_LENGTH, 0)
 
 	if amdHack {
-		gl.BindTextureUnit(uint32(store.binding), store.id)
+		BindTextureUnit(gl.TEXTURE_2D_ARRAY, store.binding, store.id)
 	}
 
 	if store.mipmaps > 1 && generateMipmaps {
-		gl.GenerateTextureMipmap(store.id)
+		generateTextureMipmaps(store.id)
 	}
 }
 
 func (store *textureStore) Bind(loc uint) {
 	store.binding = loc
 
-	gl.BindTextureUnit(uint32(loc), store.id)
+	BindTextureUnit(gl.TEXTURE_2D_ARRAY, loc, store.id)
 }
 
 func (store *textureStore) Clear() {
-	gl.ClearTexImage(store.id, 0, store.format.Format(), store.format.Type(), gl.Ptr(nil))
+	clearTexture(store, color2.NewRGBA(0, 0, 0, 0))
 }
 
 func (store *textureStore) ClearColor(clearColor color2.Color) {
-	clr := clearColor.ToIntArray()
-
-	gl.ClearTexImage(store.id, 0, store.format.Format(), store.format.Type(), gl.Ptr(&clr[0]))
+	clearTexture(store, clearColor)
 }
 
 func (store *textureStore) SetFiltering(min, mag Filter) {
 	store.min = min
 	store.mag = mag
 
-	gl.TextureParameteri(store.id, gl.TEXTURE_MIN_FILTER, int32(min))
-	gl.TextureParameteri(store.id, gl.TEXTURE_MAG_FILTER, int32(mag))
+	setTextureParameter(store.id, gl.TEXTURE_MIN_FILTER, int32(min))
+	setTextureParameter(store.id, gl.TEXTURE_MAG_FILTER, int32(mag))
 }
 
 func (store *textureStore) Dispose() {

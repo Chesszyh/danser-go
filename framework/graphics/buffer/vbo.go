@@ -23,9 +23,9 @@ func NewVertexBufferObject(maxFloats int, mapped bool, mode DrawMode) *VertexBuf
 	vbo.capacity = maxFloats
 	vbo.mode = mode
 
-	gl.CreateBuffers(1, &vbo.handle)
+	createBuffer(&vbo.handle)
 
-	gl.NamedBufferData(vbo.handle, maxFloats*4, gl.Ptr(nil), uint32(mode))
+	setBufferData(vbo.handle, maxFloats*4, gl.Ptr(nil), uint32(mode))
 
 	if mapped {
 		vbo.data = make([]float32, maxFloats)
@@ -53,7 +53,7 @@ func (vbo *VertexBufferObject) SetData(offset int, data []float32) {
 		copy(vbo.data[offset:], data)
 	}
 
-	gl.NamedBufferSubData(vbo.handle, offset*4, len(data)*4, gl.Ptr(data))
+	setBufferSubData(vbo.handle, offset*4, len(data)*4, gl.Ptr(data))
 	//gl.Flush()
 }
 
@@ -67,9 +67,9 @@ func (vbo *VertexBufferObject) Resize(newCapacity int) {
 	vbo.capacity = newCapacity
 
 	if vbo.data != nil && len(vbo.data) > 0 {
-		gl.NamedBufferData(vbo.handle, newCapacity*4, gl.Ptr(vbo.data), uint32(vbo.mode))
+		setBufferData(vbo.handle, newCapacity*4, gl.Ptr(vbo.data), uint32(vbo.mode))
 	} else {
-		gl.NamedBufferData(vbo.handle, newCapacity*4, gl.Ptr(nil), uint32(vbo.mode))
+		setBufferData(vbo.handle, newCapacity*4, gl.Ptr(nil), uint32(vbo.mode))
 	}
 }
 
@@ -101,7 +101,7 @@ func (vbo *VertexBufferObject) Unmap(offset, size int) {
 		panic(fmt.Sprintf("Data exceeds VBO's capacity. Data length: %d, Offset: %d, capacity: %d", size, offset, vbo.capacity))
 	}
 
-	gl.NamedBufferSubData(vbo.handle, offset*4, size*4, gl.Ptr(vbo.data[offset:]))
+	setBufferSubData(vbo.handle, offset*4, size*4, gl.Ptr(vbo.data[offset:]))
 }
 
 func (vbo *VertexBufferObject) Bind() {

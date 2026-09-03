@@ -8,8 +8,6 @@ import (
 	"strings"
 	"syscall"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/wieku/danser-go/framework/util"
 )
 
@@ -44,8 +42,7 @@ func NewNamedPipe(path, name string) (*NamedPipe, error) {
 		return nil, err
 	}
 
-	_, err = unix.FcntlInt(file.Fd(), unix.F_SETPIPE_SZ, 65536)
-	if err != nil {
+	if err = setPipeSize(file); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +67,7 @@ func (namedPipe *NamedPipe) Close() (err error) {
 		return
 	}
 
-	return os.Remove(namedPipe.name)
+	return os.Remove(namedPipe.Path())
 }
 
 // Name returns a system name of the pipe to use in IPC

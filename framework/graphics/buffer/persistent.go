@@ -5,10 +5,10 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/go-gl/gl/v3.3-core/gl"
 
 	"github.com/wieku/danser-go/framework/goroutines"
+	"github.com/wieku/danser-go/framework/graphics/glcaps"
 	"github.com/wieku/danser-go/framework/graphics/history"
 	"github.com/wieku/danser-go/framework/profiler"
 )
@@ -23,18 +23,18 @@ type PersistentBufferObject struct {
 }
 
 func NewPersistentBufferObject(maxFloats int) *PersistentBufferObject {
-	if !sdl.GL_ExtensionSupported("GL_ARB_buffer_storage") {
+	if !glcaps.Current().BufferStorage {
 		panic("Your GPU does not support one or more required OpenGL extensions: [GL_ARB_buffer_storage]. Please update your graphics drivers or upgrade your GPU.")
 	}
 
 	vbo := new(PersistentBufferObject)
 	vbo.capacity = maxFloats
 
-	gl.CreateBuffers(1, &vbo.handle)
+	createBuffer(&vbo.handle)
 
-	gl.NamedBufferStorage(vbo.handle, maxFloats*4, gl.Ptr(nil), gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
+	setBufferStorage(vbo.handle, maxFloats*4, gl.Ptr(nil), gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
 
-	pt := gl.MapNamedBufferRange(vbo.handle, 0, maxFloats*4, gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
+	pt := mapBufferRange(vbo.handle, 0, maxFloats*4, gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
 
 	vbo.data = unsafe.Slice((*float32)(pt), maxFloats)
 
@@ -60,7 +60,6 @@ func (vbo *PersistentBufferObject) SetData(offset int, data []float32) {
 		copy(vbo.data[offset:], data)
 	}
 
-	gl.NamedBufferSubData(vbo.handle, offset*4, len(data)*4, gl.Ptr(data[offset:]))
 }
 
 func (vbo *PersistentBufferObject) Resize(newCapacity int) {
@@ -68,11 +67,11 @@ func (vbo *PersistentBufferObject) Resize(newCapacity int) {
 
 	gl.DeleteBuffers(1, &vbo.handle)
 
-	gl.CreateBuffers(1, &vbo.handle)
+	createBuffer(&vbo.handle)
 
-	gl.NamedBufferStorage(vbo.handle, newCapacity*4, gl.Ptr(nil), gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
+	setBufferStorage(vbo.handle, newCapacity*4, gl.Ptr(nil), gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
 
-	pt := gl.MapNamedBufferRange(vbo.handle, 0, newCapacity*4, gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
+	pt := mapBufferRange(vbo.handle, 0, newCapacity*4, gl.MAP_PERSISTENT_BIT|gl.MAP_WRITE_BIT|gl.MAP_COHERENT_BIT)
 
 	vbo.data = unsafe.Slice((*float32)(pt), newCapacity)
 
