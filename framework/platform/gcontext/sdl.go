@@ -56,8 +56,10 @@ func Initialize(offscreen bool) error {
 	} // we set garbage value here so we can set proper one just before creating the window
 
 	if offscreen && runtime.GOOS != "windows" {
-		if err := sdl.SetHint(sdl.HINT_VIDEO_DRIVER, "offscreen"); err != nil {
-			return fmt.Errorf(`sdl: couldn't set hint "%s": %w`, sdl.HINT_VIDEO_DRIVER, err)
+		if runtime.GOOS != "darwin" {
+			if err := sdl.SetHint(sdl.HINT_VIDEO_DRIVER, "offscreen"); err != nil {
+				return fmt.Errorf(`sdl: couldn't set hint "%s": %w`, sdl.HINT_VIDEO_DRIVER, err)
+			}
 		}
 
 		offscreenCtx = true
@@ -71,6 +73,9 @@ func macOSSDLLibraryPath() string {
 		filepath.Join(env.LibDir(), "libSDL3.dylib"),
 		filepath.Join(env.LibDir(), ".deps", "macos", "lib", "libSDL3.dylib"),
 		filepath.Clean(filepath.Join(env.LibDir(), "..", "Frameworks", "libSDL3.dylib")),
+	}
+	if depsDir := strings.TrimSpace(os.Getenv("DANSER_MACOS_DEPS_DIR")); depsDir != "" {
+		candidates = append([]string{filepath.Join(depsDir, "lib", "libSDL3.dylib")}, candidates...)
 	}
 
 	for _, candidate := range candidates {
@@ -114,6 +119,9 @@ func SDLCreateWindow(width, height int, title string, props OptionalProps) {
 
 	if props.Resizable {
 		flags |= sdl.WINDOW_RESIZABLE
+	}
+	if runtime.GOOS == "darwin" && !props.Hidden {
+		flags |= sdl.WINDOW_HIGH_PIXEL_DENSITY
 	}
 
 	var err error
@@ -163,10 +171,14 @@ func SDLCreateWindow(width, height int, title string, props OptionalProps) {
 	if err != nil {
 		panic(err)
 	}
+
+	logicalWidth, logicalHeight, _ := sdlWindow.Size()
+	pixelWidth, pixelHeight, _ := sdlWindow.SizeInPixels()
+	log.Printf("Window size: %dx%d logical, %dx%d pixels", logicalWidth, logicalHeight, pixelWidth, pixelHeight)
 }
 
 func GetFramebufferSize() (int, int) {
-	w, h, err := sdlWindow.Size()
+	w, h, err := sdlWindow.SizeInPixels()
 	if err != nil {
 		panic(err)
 	}
@@ -193,16 +205,9 @@ func IsMinimized() bool {
 }
 
 func GetCursorPosition() (float32, float32) {
-	if sdlWindow.RelativeMouseMode() {
-		_, x, y := sdl.GetMouseState()
+	_, x, y := sdl.GetMouseState()
 
-		return x, y
-	}
-
-	xW, yW, _ := sdlWindow.Position()
-	_, xG, yG := sdl.GetGlobalMouseState()
-
-	return xG - float32(xW), yG - float32(yW)
+	return x, y
 }
 
 func GetRelativePosition() (float32, float32) {
@@ -213,7 +218,7 @@ func GetRelativePosition() (float32, float32) {
 
 func getWindowBounds() (tl, br vector.Vector2f) {
 	xW, yW, _ := sdlWindow.Position()
-	w, h, _ := sdlWindow.SizeInPixels()
+	w, h, _ := sdlWindow.Size()
 
 	return vector.NewVec2f(float32(xW), float32(yW)), vector.NewVec2f(float32(xW)+float32(w), float32(yW)+float32(h))
 }

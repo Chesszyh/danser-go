@@ -3,6 +3,7 @@ package env
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -14,6 +15,24 @@ var initialized bool
 
 func Init(pkgName string) {
 	execPath := GetExecDir()
+
+	if runtime.GOOS == "darwin" && isMacOSBundleExecutable(execPath) {
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+
+		libDir = execPath
+		dataDir = filepath.Join(homePath, "Library", "Application Support", pkgName)
+		configDir = filepath.Join(dataDir, "settings")
+
+		if err = os.MkdirAll(configDir, 0755); err != nil {
+			panic(err)
+		}
+
+		initialized = true
+		return
+	}
 
 	execPathLower := strings.ToLower(execPath)
 
@@ -53,6 +72,16 @@ func Init(pkgName string) {
 	}
 
 	initialized = true
+}
+
+func isMacOSBundleExecutable(execDir string) bool {
+	execDir = filepath.Clean(execDir)
+	contentsDir := filepath.Dir(execDir)
+	bundleDir := filepath.Dir(contentsDir)
+
+	return filepath.Base(execDir) == "MacOS" &&
+		filepath.Base(contentsDir) == "Contents" &&
+		strings.HasSuffix(strings.ToLower(filepath.Base(bundleDir)), ".app")
 }
 
 func DataDir() string {

@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/wieku/danser-go/framework/files"
 	"github.com/wieku/danser-go/framework/frame"
 	"github.com/wieku/danser-go/framework/goroutines"
+	"github.com/wieku/danser-go/framework/graphics/buffer"
 	"github.com/wieku/danser-go/framework/graphics/effects"
 	"github.com/wieku/danser-go/framework/graphics/texture"
 	"github.com/wieku/danser-go/framework/platform"
@@ -51,9 +51,8 @@ var limiter *frame.Limiter
 var parsedFormat pixconv.PixFmt
 
 type PBO struct {
-	handle     uint32
-	memPointer unsafe.Pointer
-	data       []byte
+	readback *buffer.PixelPackBuffer
+	data     []byte
 
 	convFormat pixconv.PixFmt
 
@@ -70,12 +69,8 @@ func createPBO(format pixconv.PixFmt) *PBO {
 		glSize = w * h * 3 / 2
 	}
 
-	gl.CreateBuffers(1, &pbo.handle)
-	gl.NamedBufferStorage(pbo.handle, glSize, gl.Ptr(nil), gl.MAP_PERSISTENT_BIT|gl.MAP_COHERENT_BIT|gl.MAP_READ_BIT)
-
-	pbo.memPointer = gl.MapNamedBufferRange(pbo.handle, 0, glSize, gl.MAP_PERSISTENT_BIT|gl.MAP_COHERENT_BIT|gl.MAP_READ_BIT)
-
-	pbo.data = unsafe.Slice((*byte)(pbo.memPointer), glSize)
+	pbo.readback = buffer.NewPixelPackBuffer(glSize)
+	pbo.data = pbo.readback.Data()
 
 	return pbo
 }
@@ -323,6 +318,10 @@ func stopVideo() {
 	_ = cmdVideo.Wait()
 
 	log.Println("Video process finished.")
+
+	for range MaxVideoBuffers {
+		(<-freePBOPool).readback.Dispose()
+	}
 }
 
 func PreFrame() {
@@ -366,23 +365,23 @@ func MakeFrame() {
 
 	//gl.MemoryBarrier(gl.PIXEL_BUFFER_BARRIER_BIT)
 
-	gl.BindBuffer(gl.PIXEL_PACK_BUFFER, pbo.handle)
+	gl.BindBuffer(gl.PIXEL_PACK_BUFFER, pbo.readback.ID())
 
 	gl.PixelStorei(gl.PACK_ALIGNMENT, 1)
 
 	if pbo.convFormat == pixconv.NV12 {
-		gl.GetTextureSubImage(yuvFull[0].GetID(), 0, 0, 0, 0, int32(w), int32(h), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
+		texture.ReadPixels(yuvFull[0], gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
 
-		gl.GetTextureSubImage(yuvHalf[0].GetID(), 0, 0, 0, 0, int32(w/2), int32(h/2), 1, gl.RG, gl.UNSIGNED_BYTE, int32(w*h/2), gl.PtrOffset(w*h))
+		texture.ReadPixels(yuvHalf[0], gl.RG, gl.UNSIGNED_BYTE, int32(w*h/2), gl.PtrOffset(w*h))
 	} else if pbo.convFormat == pixconv.I420 {
-		gl.GetTextureSubImage(yuvFull[0].GetID(), 0, 0, 0, 0, int32(w), int32(h), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
+		texture.ReadPixels(yuvFull[0], gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
 
-		gl.GetTextureSubImage(yuvHalf[0].GetID(), 0, 0, 0, 0, int32(w/2), int32(h/2), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h/4), gl.PtrOffset(w*h))
-		gl.GetTextureSubImage(yuvHalf[1].GetID(), 0, 0, 0, 0, int32(w/2), int32(h/2), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h/4), gl.PtrOffset(w*h*5/4))
+		texture.ReadPixels(yuvHalf[0], gl.RED, gl.UNSIGNED_BYTE, int32(w*h/4), gl.PtrOffset(w*h))
+		texture.ReadPixels(yuvHalf[1], gl.RED, gl.UNSIGNED_BYTE, int32(w*h/4), gl.PtrOffset(w*h*5/4))
 	} else if pbo.convFormat != pixconv.ARGB { //Read as yuv444p
-		gl.GetTextureSubImage(yuvFull[0].GetID(), 0, 0, 0, 0, int32(w), int32(h), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
-		gl.GetTextureSubImage(yuvFull[1].GetID(), 0, 0, 0, 0, int32(w), int32(h), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.PtrOffset(w*h))
-		gl.GetTextureSubImage(yuvFull[2].GetID(), 0, 0, 0, 0, int32(w), int32(h), 1, gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.PtrOffset(w*h*2))
+		texture.ReadPixels(yuvFull[0], gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.Ptr(nil))
+		texture.ReadPixels(yuvFull[1], gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.PtrOffset(w*h))
+		texture.ReadPixels(yuvFull[2], gl.RED, gl.UNSIGNED_BYTE, int32(w*h), gl.PtrOffset(w*h*2))
 	} else {
 		gl.ReadPixels(0, 0, int32(w), int32(h), uint32(gl.RGB), gl.UNSIGNED_BYTE, gl.Ptr(nil))
 	}
@@ -421,6 +420,7 @@ func checkData(waitForFirst, waitForAll bool) { // I tried to do that on another
 		}
 
 		gl.DeleteSync(pbo.sync)
+		pbo.readback.Download()
 
 		frameReadQueue = frameReadQueue[1:]
 

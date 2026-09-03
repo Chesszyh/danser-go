@@ -164,3 +164,14 @@ func copyTextureLayers(source, destination *textureStore, level, width, height, 
 	gl.DeleteFramebuffers(1, &readFramebuffer)
 	gl.DeleteFramebuffers(1, &drawFramebuffer)
 }
+
+func ReadPixels(source Texture, format, dataType uint32, bufferSize int32, destination unsafe.Pointer) {
+	if glcaps.Current().GetTextureSubImage {
+		gl.GetTextureSubImage(source.GetID(), 0, 0, 0, 0, source.GetWidth(), source.GetHeight(), source.GetLayers(), format, dataType, bufferSize, destination)
+		return
+	}
+
+	withTexture2DArray(source.GetID(), func() {
+		gl.GetTexImage(gl.TEXTURE_2D_ARRAY, 0, format, dataType, destination)
+	})
+}

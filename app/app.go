@@ -9,7 +9,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -818,17 +817,22 @@ func pushFrame() {
 	blend.Enable()
 	blend.SetFunction(blend.One, blend.OneMinusSrcAlpha)
 
-	viewport.Push(int(settings.Graphics.GetWidth()), int(settings.Graphics.GetHeight()))
+	frameWidth, frameHeight := int(settings.Graphics.GetWidth()), int(settings.Graphics.GetHeight())
+	if !settings.RECORD {
+		frameWidth, frameHeight = gcontext.GetFramebufferSize()
+	}
+
+	viewport.Push(frameWidth, frameHeight)
 
 	if screenFBO == nil ||
 		lastSamples != int(settings.Graphics.MSAA) ||
-		screenFBO.GetWidth() != int(settings.Graphics.GetWidth()) ||
-		screenFBO.GetHeight() != int(settings.Graphics.GetHeight()) {
+		screenFBO.GetWidth() != frameWidth ||
+		screenFBO.GetHeight() != frameHeight {
 		if screenFBO != nil {
 			screenFBO.Dispose()
 		}
 
-		screenFBO = buffer.NewFrameMultisampleScreen(int(settings.Graphics.GetWidth()), int(settings.Graphics.GetHeight()), false, int(settings.Graphics.MSAA))
+		screenFBO = buffer.NewFrameMultisampleScreen(frameWidth, frameHeight, false, int(settings.Graphics.MSAA))
 
 		lastSamples = int(settings.Graphics.MSAA)
 	}
@@ -883,8 +887,6 @@ func Run() {
 
 		closeHandler(err, stackTrace)
 	}()
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	goroutines.SetCrashHandler(closeHandler)
 

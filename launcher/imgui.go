@@ -443,11 +443,8 @@ func Begin() {
 	x, y := gcontext.GetCursorPosition()
 
 	w, h := int(settings.Graphics.GetWidth()), int(settings.Graphics.GetHeight()) //input.Win.GetFramebufferSize()
-	_, h1 := gcontext.GetFramebufferSize()
 
-	scaling := float32(h1) / float32(h)
-
-	ImIO.AddMousePosEvent(x/scaling, y/scaling)
+	ImIO.AddMousePosEvent(x, y)
 	ImIO.AddMouseButtonEvent(0, gcontext.GetLeftClick())
 	ImIO.AddMouseButtonEvent(1, gcontext.GetRightClick())
 
