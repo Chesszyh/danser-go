@@ -4,7 +4,7 @@
 
 安装程序会为当前用户安装独立的 Linux x86-64 应用。应用菜单入口和命令均名为 `danser-lazer`；不带参数启动时打开原有 danser 启动器。首次安装的设置默认启用官方 lazer 规则，并将渲染限制为 120 FPS（每秒帧数）。更新安装时保留已有设置。
 
-先安装 [Go 和原生构建依赖](../../README.zh-CN.md#构建项目)、`third_party/osu/global.json` 指定的 SDK（软件开发工具包），以及 `desktop-file-utils`。在仓库根目录运行：
+先安装 [Go 和原生构建依赖](../../README.zh-CN.md#构建项目)、`third_party/osu/global.json` 指定的 SDK（软件开发工具包）、`desktop-file-utils` 和 `jq`。请在图形桌面会话中执行安装：首次安装会调用 danser 原有的设置初始化，检测主显示器分辨率，再应用官方引擎预设。在仓库根目录运行：
 
 ```bash
 sh tools/linux/install.sh

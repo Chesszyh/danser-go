@@ -4,7 +4,7 @@
 
 This installs a separate Linux x86-64 application for the current user. The application menu entry and command are named `danser-lazer`; launching without arguments opens the existing danser launcher. The initial settings enable official lazer rules and cap rendering at 120 FPS. Existing installations retain their settings when updated.
 
-Install the [Go/native build dependencies](../../README.md#building-the-project), the SDK selected by `third_party/osu/global.json`, and `desktop-file-utils`. From the repository root, run:
+Install the [Go/native build dependencies](../../README.md#building-the-project), the SDK selected by `third_party/osu/global.json`, `desktop-file-utils`, and `jq`. Run the installer from a graphical desktop session: on first installation it uses danser's settings initialization to detect the primary monitor resolution before applying the official-engine preset. From the repository root, run:
 
 ```bash
 sh tools/linux/install.sh

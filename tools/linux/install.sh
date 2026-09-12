@@ -10,6 +10,7 @@ dotnet_cmd=${DOTNET:-dotnet}
 
 command -v desktop-file-install >/dev/null
 command -v update-desktop-database >/dev/null
+command -v jq >/dev/null
 cd "$repo_dir"
 git submodule update --init --recursive third_party/osu
 mkdir -p "$build_dir"
@@ -26,7 +27,10 @@ cp -a assets "$app_dir/"
 install -m 644 libbass.so libbass_fx.so libbassmix.so libyuv.so LICENSE CREDITS.md "$app_dir/"
 install -m 644 third_party/osu/LICENCE "$app_dir/osu-LICENCE"
 if [ ! -f "$app_dir/settings/default.json" ]; then
-    install -m 644 tools/linux/settings.json "$app_dir/settings/default.json"
+    "$app_dir/danser-lazer-bin" -noupdatecheck
+    jq -s '.[0] * .[1]' "$app_dir/settings/default.json" tools/linux/settings.json \
+        > "$app_dir/settings/default.json.tmp"
+    mv "$app_dir/settings/default.json.tmp" "$app_dir/settings/default.json"
 fi
 ln -sfn "$app_dir/danser-lazer" "$bin_dir/danser-lazer"
 desktop-file-install --dir="$data_home/applications" \
