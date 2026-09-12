@@ -62,6 +62,10 @@ func setRenderbufferStorage(renderbuffer, internalFormat uint32, width, height i
 }
 
 func setRenderbufferStorageMultisample(renderbuffer uint32, samples int32, internalFormat uint32, width, height int32) {
+	var maxSamples int32
+	gl.GetIntegerv(gl.MAX_SAMPLES, &maxSamples)
+	samples = min(samples, maxSamples)
+
 	if glcaps.Current().DirectStateAccess {
 		gl.NamedRenderbufferStorageMultisample(renderbuffer, samples, internalFormat, width, height)
 		return
