@@ -54,33 +54,7 @@ func (scheduler *GenericScheduler) Init(objs []objects.IHitObject, diff *difficu
 		}
 	}
 
-	// Convert two overlapping circles (slider starts too if slider danced) to one double-tap circle
-	for i := range len(scheduler.queue) - 1 {
-		current, pOk := scheduler.queue[i].(*objects.Circle)
-		next, cOk := scheduler.queue[i+1].(*objects.Circle)
-
-		if pOk && cOk && (!current.SliderPoint || current.SliderPointStart || (current.SliderPointEnd && diff.CheckModActive(difficulty.Lazer))) && (!next.SliderPoint || next.SliderPointStart || (next.SliderPointEnd && diff.CheckModActive(difficulty.Lazer))) {
-			dst := current.GetStackedEndPositionMod(diff).Dst(next.GetStackedStartPositionMod(diff))
-
-			if dst <= float32(diff.CircleRadius*1.995) && next.GetStartTime()-current.GetEndTime() <= 3 { // Sacrificing a bit of UR for better looks
-				sTime := (next.GetStartTime() + current.GetEndTime()) / 2
-
-				if current.SliderPointEnd && diff.CheckModActive(difficulty.Lazer) { // Prioritize slider end timing
-					sTime = current.GetEndTime()
-				}
-
-				dC := objects.DummyCircle(current.GetStackedEndPositionMod(diff).Add(next.GetStackedStartPositionMod(diff)).Scl(0.5), sTime)
-
-				if !diff.CheckModActive(difficulty.Lazer) || (!current.SliderPointEnd && !next.SliderPointEnd) { // Don't double-click if any of them is a slider end
-					dC.DoubleClick = true
-				}
-
-				scheduler.queue[i] = dC
-
-				scheduler.queue = append(scheduler.queue[:i+1], scheduler.queue[i+2:]...)
-			}
-		}
-	}
+	scheduler.mergeOverlappingCircles()
 
 	// Spread overlapping circles timing-wise
 	for i := range len(scheduler.queue) - 1 {
@@ -114,6 +88,38 @@ func (scheduler *GenericScheduler) Init(objs []objects.IHitObject, diff *difficu
 
 	toRemove := scheduler.mover.SetObjects(scheduler.queue) - 1
 	scheduler.queue = scheduler.queue[toRemove:]
+}
+
+func (scheduler *GenericScheduler) mergeOverlappingCircles() {
+	diff := scheduler.diff
+
+	// Merging removes an object, so each iteration must check the current queue length.
+	for i := 0; i+1 < len(scheduler.queue); i++ {
+		current, pOk := scheduler.queue[i].(*objects.Circle)
+		next, cOk := scheduler.queue[i+1].(*objects.Circle)
+
+		if pOk && cOk && (!current.SliderPoint || current.SliderPointStart || (current.SliderPointEnd && diff.CheckModActive(difficulty.Lazer))) && (!next.SliderPoint || next.SliderPointStart || (next.SliderPointEnd && diff.CheckModActive(difficulty.Lazer))) {
+			dst := current.GetStackedEndPositionMod(diff).Dst(next.GetStackedStartPositionMod(diff))
+
+			if dst <= float32(diff.CircleRadius*1.995) && next.GetStartTime()-current.GetEndTime() <= 3 { // Sacrificing a bit of UR for better looks
+				sTime := (next.GetStartTime() + current.GetEndTime()) / 2
+
+				if current.SliderPointEnd && diff.CheckModActive(difficulty.Lazer) { // Prioritize slider end timing
+					sTime = current.GetEndTime()
+				}
+
+				dC := objects.DummyCircle(current.GetStackedEndPositionMod(diff).Add(next.GetStackedStartPositionMod(diff)).Scl(0.5), sTime)
+
+				if !diff.CheckModActive(difficulty.Lazer) || (!current.SliderPointEnd && !next.SliderPointEnd) { // Don't double-click if any of them is a slider end
+					dC.DoubleClick = true
+				}
+
+				scheduler.queue[i] = dC
+
+				scheduler.queue = append(scheduler.queue[:i+1], scheduler.queue[i+2:]...)
+			}
+		}
+	}
 }
 
 func (scheduler *GenericScheduler) Update(time float64) {
