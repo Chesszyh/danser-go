@@ -1,5 +1,7 @@
 # Official osu!lazer rules host
 
+[简体中文](README.zh-CN.md) · [Implementation](IMPLEMENTATION.md) · [Linux app installation](../linux/README.md)
+
 This host runs osu!standard replay and live input through the official osu!lazer ruleset. Danser keeps its existing renderer and cursor handling, while the host supplies authoritative judgement events, score, combo, health, rank, and performance points (PP).
 
 The osu! source is pinned by the `third_party/osu` Git submodule. Every response includes that source revision. Danser rejects an incompatible response or host failure instead of silently switching scoring engines.
@@ -61,4 +63,4 @@ dotnet build tools/lazer-rules-host/Danser.LazerRulesHost.csproj
 go test ./app/rulesets/osu/...
 ```
 
-Protocol changes belong in `Protocol.cs` and `app/rulesets/osu/lazer/protocol.go`. Increase `ProtocolVersion` on both sides for incompatible changes.
+Protocol schemas belong in `Protocol.cs` and `app/rulesets/osu/lazer/protocol.go`. For incompatible changes, update `Protocol.Version` in `Protocol.cs` and `ProtocolVersion` in `app/rulesets/osu/lazer/client.go` together.

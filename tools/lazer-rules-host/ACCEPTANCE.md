@@ -1,5 +1,7 @@
 # Manual osu!lazer acceptance
 
+[简体中文](ACCEPTANCE.zh-CN.md)
+
 Run commands from the danser repository root. Use the newly built `danser-acceptance` and its adjacent `lazer-rules-host` directory.
 
 ## Prepare a comparable score

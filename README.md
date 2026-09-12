@@ -4,6 +4,8 @@
 
 # danser-go
 
+[简体中文](README.zh-CN.md)
+
 [![GitHub release](https://img.shields.io/github/release/wieku/danser-go.svg)](https://github.com/Wieku/danser-go/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/wieku/danser-go/total?label=Downloads)](https://github.com/Wieku/danser-go/releases)
 [![CodeFactor](https://www.codefactor.io/repository/github/wieku/danser-go/badge)](https://www.codefactor.io/repository/github/wieku/danser-go)
@@ -111,7 +113,7 @@ You need to clone it or download as a .zip (and unpack it to desired directory)
 * gcc/g++ (Linux/Unix), [WinLibs](http://winlibs.com/) MSVCRT+POSIX (Windows, TDM-GCC won't work, mingw-w64 is outdated)
 * OpenGL library (shipped with drivers, `libgl1-mesa-dev` when building on Linux servers)
 * xorg-dev, libgtk-3 and libgtk-3-dev (Linux)
-* [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (only for the optional official osu!lazer rules host)
+* The .NET SDK specified by `third_party/osu/global.json` (only for the optional [official osu!lazer rules host](tools/lazer-rules-host/README.md))
 
 #### Building and running the project
 
@@ -135,6 +137,8 @@ Running without arguments (as opposed in [Running Danser](#running-danser)) will
 use drag&drop on the executable to preload a replay. If that ability is desired, build danser using dist scripts.
 
 To use the official osu! source for local lazer replays or live play, build and enable the [official rules host](tools/lazer-rules-host/README.md).
+
+For a separate Linux desktop application with official rules enabled, follow the [danser-lazer installation guide](tools/linux/README.md). The [implementation reference](tools/lazer-rules-host/IMPLEMENTATION.md) describes the scoring integration.
 
 
 ## Credits and License
