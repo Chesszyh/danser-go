@@ -36,7 +36,12 @@ func InitRenderer() {
 		panic(err)
 	}
 
-	capShader = shader.NewRShader(shader.NewSource(capsSource, shader.Vertex))
+	depthSource, err := assets.GetString("assets/shaders/sliderdepth.fsh")
+	if err != nil {
+		panic(err)
+	}
+
+	capShader = shader.NewRShader(shader.NewSource(capsSource, shader.Vertex), shader.NewSource(depthSource, shader.Fragment))
 
 	linesSource, err := assets.GetString("assets/shaders/sliderlines.vsh")
 
@@ -44,7 +49,7 @@ func InitRenderer() {
 		panic(err)
 	}
 
-	lineShader = shader.NewRShader(shader.NewSource(linesSource, shader.Vertex))
+	lineShader = shader.NewRShader(shader.NewSource(linesSource, shader.Vertex), shader.NewSource(depthSource, shader.Fragment))
 
 	colorVSource, err := assets.GetString("assets/shaders/slidercolor.vsh")
 

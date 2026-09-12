@@ -23,12 +23,12 @@ cannot supply it.
 | Darwin/arm64 build | VERIFIED | `go test ./...` and `go build ./...` pass, and the root binary is an arm64 Mach-O. Go 1.26 printf-vet findings were fixed in a separate commit. |
 | SDL3 window and OpenGL 4.1 Core context | VERIFIED | Native Cocoa window created with source-built SDL 3.4.16; runtime logged Apple M4, OpenGL 4.1 Metal 90.5, GLSL 4.10, and the selected compatibility capabilities. |
 | BASS audio and libyuv integration | VERIFIED | The default BASS device initializes at 17 ms; a real recording completed its libyuv conversion and contains non-silent AAC audio (`mean_volume=-37.2 dB`, `max_volume=-13.3 dB`). |
-| OpenGL 4.1 buffer/VAO/draw path | VERIFIED | Continuous gameplay exercised mapped VBO and instanced slider rendering. A 4,687-frame replay also ran with `UsePersistentBuffers=true` while the capability report showed buffer storage unavailable, selecting the streaming fallback. |
+| OpenGL 4.1 buffer/VAO/draw path | VERIFIED | Native pixel-readback regression verifies visible straight and bent slider tracks. A 4,687-frame replay also ran with `UsePersistentBuffers=true` while the capability report showed buffer storage unavailable, selecting the streaming fallback. |
 | OpenGL 4.1 texture/framebuffer path | VERIFIED | Screenshot and recording exercised readback and framebuffer effects. The focused OpenGL diagnostic passed texture-layer preservation/clear/readback and 4x MSAA resolve without a GL error. |
 | Launcher, input, scaling, and fullscreen | VERIFIED | The launcher ran from the app bundle; synthetic SDL key-down/up events updated both state and listeners; windowed logical coordinates and a 1920x1080 fullscreen drawable were exercised. |
 | Launcher playback and settings round trip | VERIFIED | The 2026-09-12 native regression exercised the actual danse button handler, window minimization, playback, Ctrl+O settings restoration, and Escape returning to the launcher. See the dated evidence below. |
 | Beatmap watch/replay for at least 60 seconds | VERIFIED | The fixed 75-second smoke map rendered continuously for over 95 wall-clock seconds. Its generated replay parsed all 4,687 frames, ran to the score screen, and reported a 74,992 ms replay duration. |
-| Screenshot | VERIFIED | `screenshots/macos-smoke-40s.png` is a visually inspected 1280x720 frame with background, storyboard sprite, slider, cursor, and UI. |
+| Screenshot | VERIFIED | `screenshots/macos-smoke-40s.png` is a visually inspected 1280x720 frame with background, storyboard sprite, hit circle, and cursor. |
 | Recording | VERIFIED | `videos/macos-smoke-video.mp4` decodes as 640x360 H.264 at 30 fps plus 48 kHz stereo AAC; duration is 17.0 seconds. An extracted frame was visually inspected. |
 | Retina/high-DPI | BLOCKED (hardware) | The SDL flag, pixel-size framebuffer, logical input coordinates, and `NSHighResolutionCapable` bundle key are implemented. Both bare and bundled runs report 800x534 logical/800x534 pixels because the attached display is 1920x1080 non-Retina; a 2x backing surface cannot be exercised on this host. |
 | `.app` bundle | VERIFIED | The 63 MB ad-hoc-signed arm64 bundle has a valid icon/plist and one `@executable_path/../Frameworks` rpath. The executable reports `minos 15.0`, the bundled SDL reports `minos 11.0`, and the plist declares macOS 15. `open -n` reached launcher/OpenGL/BASS/FFmpeg using packed assets and `~/Library/Application Support/danser`. |
@@ -217,6 +217,38 @@ To repeat the runtime check, open the app, select a standard-mode map, choose
 Watch, and click **danse!**. During playback press **Ctrl+O**, then return focus
 to playback and press **Escape**. The settings window should open and the
 launcher should remain usable after playback exits.
+
+### 2026-09-12: visible slider tracks
+
+- The slider depth framebuffer was complete and cleared successfully, but its
+  line, joint, and cap draw calls returned `GL_INVALID_OPERATION` (`0x502`) on
+  Apple OpenGL 4.1. Its depth texture stayed at the clear value of 1, so the
+  coloring pass discarded the entire track. Hit circles, reverse arrows, and
+  gameplay judgment were unaffected.
+- The two depth-rendering programs now include `sliderdepth.fsh`. Its empty
+  fragment stage preserves rasterized depth and lets the existing coloring pass
+  draw the track on macOS.
+- `TestSliderTrackRendering` exercises the production slider renderer in a
+  hidden native context. It checks OpenGL errors, depth writes, visible pixels
+  along straight and bent tracks, and transparency outside the tracks. The
+  original programs failed with `0x502`; adding the fragment stage passes the
+  test. This checks actual drawing, beyond successful shader compilation and
+  program linking.
+- Screenshots of `Raise the Huddle [osu!ph Cavalry Battle]` at 1.0 seconds were
+  compared using the same copied configuration. The corrected packed-asset
+  build shows the previously absent curved track and border. The original
+  smoke screenshot at 40 seconds showed a hit circle and did not establish
+  slider-track visibility.
+
+Run the native regression from the repository root in a macOS desktop session:
+
+```sh
+DANSER_TEST_OPENGL=1 DANSER_MACOS_DEPS_DIR="$PWD/.deps/macos" GOMAXPROCS=2 \
+  go test ./app/graphics/sliderrenderer -run TestSliderTrackRendering -count=1 -v
+```
+
+Ordinary `go test ./...` skips this native-context test unless explicitly
+enabled. The test uses isolated assets and does not load user settings or maps.
 
 ### Resource-safe verification policy
 
