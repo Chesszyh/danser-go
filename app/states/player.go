@@ -386,6 +386,10 @@ func NewPlayer(beatMap *beatmap.BeatMap) *Player {
 		startOffset = -preempt
 	}
 
+	if controller, ok := player.controller.(*dance.PlayerController); ok {
+		controller.BeginOfficialLive()
+	}
+
 	player.startPointE = startOffset
 
 	startOffset += -settings.Playfield.LeadInHold * 1000
@@ -1234,4 +1238,8 @@ func (player *Player) Show() {}
 
 func (player *Player) Hide() {}
 
-func (player *Player) Dispose() {}
+func (player *Player) Dispose() {
+	if closer, ok := player.controller.(interface{ Close() }); ok {
+		closer.Close()
+	}
+}

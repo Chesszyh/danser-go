@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+app_dir=$(dirname "$(readlink -f "$0")")
+
+if [ "$#" -eq 1 ] && [ -f "$1" ]; then
+    case "$1" in
+        *.osr) set -- "-replay=$(readlink -f "$1")" ;;
+    esac
+fi
+
+cd "$app_dir"
+exec ./danser-lazer-bin "$@"

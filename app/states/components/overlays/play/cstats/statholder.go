@@ -130,6 +130,7 @@ func (h *StatHolder) SetScoreStats(score osu.Score) {
 	h.stats["ppSpeed"] = score.PP.Speed
 	h.stats["ppAcc"] = score.PP.Acc
 	h.stats["ppFL"] = score.PP.Flashlight
+	h.stats["ppReading"] = score.PP.Reading
 }
 
 func (h *StatHolder) SetFCPP(pp api.PPv2Results) {
@@ -138,6 +139,7 @@ func (h *StatHolder) SetFCPP(pp api.PPv2Results) {
 	h.stats["fcPPSpeed"] = pp.Speed
 	h.stats["fcPPAcc"] = pp.Acc
 	h.stats["fcPPFL"] = pp.Flashlight
+	h.stats["fcPPReading"] = pp.Reading
 }
 
 func (h *StatHolder) SetSSPP(pp api.PPv2Results) {
@@ -146,6 +148,7 @@ func (h *StatHolder) SetSSPP(pp api.PPv2Results) {
 	h.stats["ssPPSpeed"] = pp.Speed
 	h.stats["ssPPAcc"] = pp.Acc
 	h.stats["ssPPFL"] = pp.Flashlight
+	h.stats["ssPPReading"] = pp.Reading
 }
 
 func (h *StatHolder) AddClick(time float64) {
