@@ -26,6 +26,7 @@ cannot supply it.
 | OpenGL 4.1 buffer/VAO/draw path | VERIFIED | Continuous gameplay exercised mapped VBO and instanced slider rendering. A 4,687-frame replay also ran with `UsePersistentBuffers=true` while the capability report showed buffer storage unavailable, selecting the streaming fallback. |
 | OpenGL 4.1 texture/framebuffer path | VERIFIED | Screenshot and recording exercised readback and framebuffer effects. The focused OpenGL diagnostic passed texture-layer preservation/clear/readback and 4x MSAA resolve without a GL error. |
 | Launcher, input, scaling, and fullscreen | VERIFIED | The launcher ran from the app bundle; synthetic SDL key-down/up events updated both state and listeners; windowed logical coordinates and a 1920x1080 fullscreen drawable were exercised. |
+| Launcher playback and settings round trip | VERIFIED | The 2026-09-12 native regression exercised the actual danse button handler, window minimization, playback, Ctrl+O settings restoration, and Escape returning to the launcher. See the dated evidence below. |
 | Beatmap watch/replay for at least 60 seconds | VERIFIED | The fixed 75-second smoke map rendered continuously for over 95 wall-clock seconds. Its generated replay parsed all 4,687 frames, ran to the score screen, and reported a 74,992 ms replay duration. |
 | Screenshot | VERIFIED | `screenshots/macos-smoke-40s.png` is a visually inspected 1280x720 frame with background, storyboard sprite, slider, cursor, and UI. |
 | Recording | VERIFIED | `videos/macos-smoke-video.mp4` decodes as 640x360 H.264 at 30 fps plus 48 kHz stereo AAC; duration is 17.0 seconds. An extracted frame was visually inspected. |
@@ -185,6 +186,37 @@ through `PATH` (the Homebrew installation above supplies it).
   the chosen compatibility backend is deliberately narrower than a Metal
   rewrite. See Apple's [macOS Mojave release notes](https://developer.apple.com/documentation/macos-release-notes/macos-mojave-10_14-release-notes)
   and [OpenGL profile constants](https://developer.apple.com/documentation/appkit/opengl-profiles).
+
+### 2026-09-12: launcher playback thread regression
+
+- The delayed Watch-mode button handler called `startDanser` from a background
+  goroutine. Its window minimization entered Cocoa off the main thread and
+  terminated the launcher with `SIGTRAP`. The native crash diagnostic states
+  `Must only be used from the main thread`; the application stack runs through
+  `drawLowerPanel`, `startDanser`, and `gcontext.Minimize`. SDL documents the
+  [main-thread requirement for window minimization](https://wiki.libsdl.org/SDL3/SDL_MinimizeWindow).
+- Playback startup now returns to the existing main-thread queue after the
+  delay. The player's Ctrl+O request also opens settings, restores the window,
+  and focuses it on that queue.
+- A temporary Go source overlay selected `INTERNET YAMERO [CRAZY]` and triggered
+  the existing danse button handler. It left the subprocess and window code
+  intact. The original handler exited with status 2 after 1.35 seconds; the
+  corrected handler started the same map and remained alive for the 12-second
+  observation period. The launcher reported 800x534 logical / 1600x1068 pixels,
+  and playback reported 1920x1080 logical / 3840x2160 pixels.
+- The subsequent native lifecycle check verified that the launcher minimized,
+  Ctrl+O restored it, Escape ended playback normally, and the launcher remained
+  alive and restored. `go test ./...` passed. The launcher has no isolated
+  native-window unit-test seam; this regression was checked through the real
+  macOS runtime. The diagnostic overlay is excluded from the shipped source
+  and app bundle.
+- The initial port validation exercised the launcher and direct playback
+  separately. It did not cover the launcher's transition into playback.
+
+To repeat the runtime check, open the app, select a standard-mode map, choose
+Watch, and click **danse!**. During playback press **Ctrl+O**, then return focus
+to playback and press **Escape**. The settings window should open and the
+launcher should remain usable after playback exits.
 
 ### Resource-safe verification policy
 

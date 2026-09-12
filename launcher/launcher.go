@@ -1296,7 +1296,8 @@ func (l *launcher) drawLowerPanel() {
 					} else {
 						goroutines.Run(func() {
 							time.Sleep(500 * time.Millisecond)
-							l.startDanser()
+							// Starting playback also minimizes the SDL window, which requires the main thread.
+							goroutines.CallMain(l.startDanser)
 						})
 					}
 				}
@@ -1746,12 +1747,14 @@ func (l *launcher) startDanser() {
 			line := sc.Text()
 
 			if strings.Contains(line, "Launcher: Open settings") {
-				if l.currentEditor == nil || !l.currentEditor.opened {
-					l.openCurrentSettingsEditor()
-				}
+				goroutines.CallMain(func() {
+					if l.currentEditor == nil || !l.currentEditor.opened {
+						l.openCurrentSettingsEditor()
+					}
 
-				gcontext.Restore()
-				gcontext.Focus()
+					gcontext.Restore()
+					gcontext.Focus()
+				})
 			}
 
 			if strings.Contains(line, "panic:") {
