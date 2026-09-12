@@ -1,0 +1,9 @@
+{
+  "Gameplay": {
+    "LazerRulesEngine": "official"
+  },
+  "Graphics": {
+    "VSync": false,
+    "FPSCap": 120
+  }
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=danser-lazer
+Comment=osu!standard replays and live play with official lazer scoring
+Comment[zh_CN]=使用官方 lazer 评分的 osu!standard 回放与游玩
+Exec=danser-lazer %f
+Icon=danser-lazer
+Terminal=false
+Categories=Game;
+StartupNotify=false

@@ -1,5 +1,7 @@
 # Credits
 
+[简体中文](CREDITS.zh-CN.md)
+
 ## Authors
 
 Software created by **Sebastian Krajewski** ([@Wieku](https://github.com/Wieku))
