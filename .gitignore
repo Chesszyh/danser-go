@@ -22,5 +22,6 @@ api.txt
 *.osr
 /lazer-rules-host/
 /danser-test
+/danser-acceptance
 /tools/lazer-rules-host/bin/
 /tools/lazer-rules-host/obj/

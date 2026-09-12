@@ -12,7 +12,7 @@ Live play streams frames to one persistent host and waits for each frame acknowl
 
 ## Build
 
-The host requires the .NET 8 SDK.
+Use the .NET SDK specified by `third_party/osu/global.json`. The host's target framework is defined in `Danser.LazerRulesHost.csproj` and follows the referenced osu! projects.
 
 ```bash
 git submodule update --init --recursive third_party/osu
@@ -47,6 +47,8 @@ The host prints one JSON document to standard output:
 ```
 
 Omit `--mods-json` to use the replay's original mods. `recorded` is always the score stored in the replay. `rejudged`, per-judgement score snapshots, and actual, full-combo, and perfect-play PP are calculated by the pinned osu! source. The `live` command uses a JSON Lines request/acknowledgement protocol on standard input and output; danser owns that protocol and users normally do not invoke it directly.
+
+For client comparison, follow the [manual acceptance checklist](ACCEPTANCE.md).
 
 ## Update osu!lazer
 
