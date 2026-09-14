@@ -31,7 +31,7 @@ cannot supply it.
 | Screenshot | VERIFIED | `screenshots/macos-smoke-40s.png` is a visually inspected 1280x720 frame with background, storyboard sprite, hit circle, and cursor. |
 | Recording | VERIFIED | `videos/macos-smoke-video.mp4` decodes as 640x360 H.264 at 30 fps plus 48 kHz stereo AAC; duration is 17.0 seconds. An extracted frame was visually inspected. |
 | Retina/high-DPI | BLOCKED (hardware) | The SDL flag, pixel-size framebuffer, logical input coordinates, and `NSHighResolutionCapable` bundle key are implemented. Both bare and bundled runs report 800x534 logical/800x534 pixels because the attached display is 1920x1080 non-Retina; a 2x backing surface cannot be exercised on this host. |
-| `.app` bundle | VERIFIED | The 63 MB ad-hoc-signed arm64 bundle has a valid icon/plist and one `@executable_path/../Frameworks` rpath. The executable reports `minos 15.0`, the bundled SDL reports `minos 11.0`, and the plist declares macOS 15. `open -n` reached launcher/OpenGL/BASS/FFmpeg using packed assets and `~/Library/Application Support/danser`. |
+| `.app` bundle | VERIFIED | The ad-hoc-signed arm64 bundle has a valid icon/plist, one `@executable_path/../Frameworks` rpath, and a self-contained official osu!lazer rules host. The executable reports `minos 15.0`, the bundled SDL reports `minos 11.0`, and the plist declares macOS 15. `open -n` reached launcher/OpenGL/BASS/FFmpeg using packed assets and `~/Library/Application Support/danser`. |
 | Windows/Linux preservation | VERIFIED | Platform-specific context creation remains behind build tags and graphics selection is capability-based. Native tests pass; the pure `env` and `glcaps` test binaries cross-compile for amd64 Linux and Windows. Runtime testing on those operating systems was not performed. |
 | Final source/documentation/commit audit | VERIFIED | Shell syntax, formatting, `git diff --check`, `go test ./...`, `go build ./...`, generated artifacts, build tags, and the scoped diff were checked before the final commit. |
 
@@ -46,8 +46,9 @@ scatter OS checks through rendering callers.
 
 ## Build and run on Apple Silicon
 
-Install Go plus the Homebrew build/runtime dependencies, stage the proprietary
-BASS binaries from their official downloads, and build the local app bundle:
+Install Go, the .NET SDK selected by `third_party/osu/global.json`, and the
+Homebrew build/runtime dependencies. Then stage the proprietary BASS binaries
+from their official downloads and build the local app bundle:
 
 ```sh
 brew install ffmpeg cmake ninja
@@ -56,7 +57,9 @@ brew install ffmpeg cmake ninja
 open dist/build-macos/danser.app
 ```
 
-The generated arm64 application targets macOS 15 or newer. The module's Go
+The generated arm64 application targets macOS 15 or newer. It includes the
+self-contained `lazer-rules-host/danser-lazer-rules` companion, so official
+osu!lazer scoring does not require a system .NET installation. The module's Go
 1.26 toolchain itself supports macOS 12 according to
 [Go's Darwin support table](https://go.dev/wiki/Darwin), but the pinned cimgui
 dependency ships an arm64 static library built for macOS 15; the bundle
@@ -70,8 +73,9 @@ Apple Developer identity and notarization credentials that are intentionally
 outside this port. Settings, databases, screenshots, and videos from the app
 bundle live under `~/Library/Application Support/danser`; the bundle itself
 contains only executables, packed assets, libraries, licensing files, and its
-icon. SDL3 and BASS are bundled; FFmpeg remains a runtime dependency discovered
-through `PATH` (the Homebrew installation above supplies it).
+icon. SDL3, BASS, and the official rules host are bundled; FFmpeg remains a
+runtime dependency discovered through `PATH` (the Homebrew installation above
+supplies it).
 
 ## Evidence log
 
@@ -167,7 +171,8 @@ through `PATH` (the Homebrew installation above supplies it).
   and window bounds, but `SDL_GetWindowSizeInPixels` for the viewport and final
   framebuffer. See the [SDL high-DPI guide](https://wiki.libsdl.org/SDL3/README-highdpi)
   and [SDL_CreateWindow](https://wiki.libsdl.org/SDL3/SDL_CreateWindow).
-- `dist-macos.sh` builds an arm64 release bundle, packs assets, includes SDL3
+- `dist-macos.sh` builds an arm64 release bundle, publishes the official rules
+  host as a self-contained `osx-arm64` application, packs assets, includes SDL3
   and the three BASS dylibs under `Contents/Frameworks`, rewrites its rpath to
   `@executable_path/../Frameworks`, creates an application icon and
   `Info.plist`, and applies an ad-hoc signature. `codesign --verify --deep
@@ -249,6 +254,21 @@ DANSER_TEST_OPENGL=1 DANSER_MACOS_DEPS_DIR="$PWD/.deps/macos" GOMAXPROCS=2 \
 
 Ordinary `go test ./...` skips this native-context test unless explicitly
 enabled. The test uses isolated assets and does not load user settings or maps.
+
+### 2026-09-14: bundled official osu!lazer rules host
+
+- The macOS distribution publishes `Danser.LazerRulesHost.csproj` for
+  `osx-arm64` as a self-contained application under
+  `Contents/MacOS/lazer-rules-host`, which is the path resolved by the bundled
+  danser executable. The pinned osu! licence is installed under
+  `Contents/Resources`.
+- The signed bundle's host runs with `DOTNET_ROOT` set to a nonexistent path,
+  confirming that it does not depend on a system .NET runtime. A generated
+  4,687-frame replay was rejudged against the smoke beatmap; the host returned
+  protocol version 3, the pinned osu! source revision, chronological judgements,
+  and actual/full-combo/perfect-play performance values.
+- `go test -count=1 ./...`, `go build ./...`, shell syntax validation, and deep
+  bundle signature verification passed after the packaging change.
 
 ### Resource-safe verification policy
 

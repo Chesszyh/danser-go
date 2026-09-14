@@ -137,6 +137,7 @@ Running without arguments (as opposed in [Running Danser](#running-danser)) will
 use drag&drop on the executable to preload a replay. If that ability is desired, build danser using dist scripts.
 
 To use the official osu! source for local lazer replays or live play, build and enable the [official rules host](tools/lazer-rules-host/README.md).
+The Apple Silicon [macOS bundle](docs/macos-port.md#build-and-run-on-apple-silicon) includes a self-contained copy of that host.
 
 For a separate Linux desktop application with official rules enabled, follow the [danser-lazer installation guide](tools/linux/README.md). The [implementation reference](tools/lazer-rules-host/IMPLEMENTATION.md) describes the scoring integration.
 

@@ -14,6 +14,7 @@ macos_dir="$app_dir/Contents/MacOS"
 frameworks_dir="$app_dir/Contents/Frameworks"
 resources_dir="$app_dir/Contents/Resources"
 deps_dir=${DANSER_MACOS_DEPS_DIR:-"$repo_dir/.deps/macos"}
+dotnet_cmd=${DOTNET:-dotnet}
 version=${1:-dev-macos}
 bundle_version=${2:-0.0.0}
 deployment_target=15.0
@@ -25,6 +26,11 @@ for tool in go git install_name_tool codesign iconutil sips; do
 	fi
 done
 
+if ! command -v "$dotnet_cmd" >/dev/null 2>&1; then
+	echo "Required build tool is missing: $dotnet_cmd" >&2
+	exit 1
+fi
+
 commit_hash=$(git -C "$repo_dir" rev-parse HEAD)
 
 for library in libSDL3.dylib libbass.dylib libbass_fx.dylib libbassmix.dylib; do
@@ -34,8 +40,26 @@ for library in libSDL3.dylib libbass.dylib libbass_fx.dylib libbassmix.dylib; do
 	fi
 done
 
+git -C "$repo_dir" submodule update --init --recursive third_party/osu
+
 rm -rf "$app_dir"
 mkdir -p "$macos_dir" "$frameworks_dir" "$resources_dir"
+
+(
+	cd "$repo_dir/third_party/osu"
+	DOTNET_CLI_TELEMETRY_OPTOUT=1 "$dotnet_cmd" publish \
+		"$repo_dir/tools/lazer-rules-host/Danser.LazerRulesHost.csproj" \
+		--configuration Release \
+		--runtime osx-arm64 \
+		--self-contained true \
+		--output "$macos_dir/lazer-rules-host" \
+		-m:2
+)
+
+if [ ! -x "$macos_dir/lazer-rules-host/danser-lazer-rules" ]; then
+	echo "Official osu!lazer rules host was not published" >&2
+	exit 1
+fi
 
 MACOSX_DEPLOYMENT_TARGET="$deployment_target" \
 	CGO_CFLAGS="-O2 -g -mmacosx-version-min=$deployment_target" \
@@ -54,6 +78,7 @@ cp "$deps_dir/lib/libbass.dylib" "$frameworks_dir/"
 cp "$deps_dir/lib/libbass_fx.dylib" "$frameworks_dir/"
 cp "$deps_dir/lib/libbassmix.dylib" "$frameworks_dir/"
 cp "$repo_dir/LICENSE" "$repo_dir/CREDITS.md" "$resources_dir/"
+cp "$repo_dir/third_party/osu/LICENCE" "$resources_dir/osu-LICENCE"
 
 iconset_dir="$build_dir/danser.iconset"
 rm -rf "$iconset_dir"
