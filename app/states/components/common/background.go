@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/EdlinOrg/prominentcolor"
+	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
 
 	"github.com/wieku/danser-go/app/beatmap"
@@ -173,7 +174,12 @@ func (bg *Background) Update(time float64, x, y float64) {
 
 func project(pos vector.Vector2d, camera mgl32.Mat4) vector.Vector2d {
 	res := camera.Mul4x1(mgl32.Vec4{pos.X32(), pos.Y32(), 0.0, 1.0})
-	return vector.NewVec2d((float64(res[0])/2+0.5)*settings.Graphics.GetWidthF(), float64((res[1])/2+0.5)*settings.Graphics.GetWidthF())
+	var target [4]int32
+	gl.GetIntegerv(gl.VIEWPORT, &target[0])
+	return vector.NewVec2d(
+		float64(target[0])+(float64(res[0])/2+0.5)*float64(target[2]),
+		float64(target[1])+(float64(res[1])/2+0.5)*float64(target[3]),
+	)
 }
 
 func (bg *Background) Draw(time float64, batch *batch.QuadBatch, blurVal, bgAlpha float64, camera mgl32.Mat4) {

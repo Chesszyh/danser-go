@@ -3,7 +3,8 @@ package bass
 /*
 #cgo CFLAGS: -I/usr/include -I.
 #cgo !darwin LDFLAGS: -Wl,-rpath,$ORIGIN -L${SRCDIR} -L${SRCDIR}/../../ -L/usr/lib/danser -L/usr/lib -lbass -lbass_fx -lbassmix
-#cgo darwin LDFLAGS: -Wl,-rpath,${SRCDIR}/../../.deps/macos/lib -L${SRCDIR}/../../.deps/macos/lib -lbass -lbass_fx -lbassmix
+#cgo darwin,!danser_external_deps LDFLAGS: -Wl,-rpath,${SRCDIR}/../../.deps/macos/lib -L${SRCDIR}/../../.deps/macos/lib
+#cgo darwin LDFLAGS: -lbass -lbass_fx -lbassmix
 #include "bass.h"
 #include "bass_fx.h"
 #include "bassmix.h"

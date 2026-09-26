@@ -313,6 +313,10 @@ func (vao *VertexArrayObject) hasModernBinding() bool {
 }
 
 func (vao *VertexArrayObject) prepareBaseInstance(baseInstance int) {
+	if glcaps.Current().BaseInstance {
+		baseInstance = 0
+	}
+
 	if vao.hasModernBinding() || vao.legacyBaseInstance == baseInstance {
 		return
 	}

@@ -1,0 +1,47 @@
+name: macOS compatibility
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      GOMAXPROCS: '2'
+      DANSER_MACOS_DEPS_DIR: ${{ github.workspace }}/.deps/macos
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: third_party/osu/global.json
+      - name: Install build and recording tools
+        run: brew install cmake ninja ffmpeg
+      - uses: actions/cache@v4
+        with:
+          path: .deps/macos
+          key: macos-arm64-deps-${{ hashFiles('tools/macos-deps.sh') }}
+      - name: Prepare native dependencies
+        run: ./tools/macos-deps.sh
+      - name: Test including native OpenGL regressions
+        run: ./tools/macos-test.sh
+      - name: Build and verify app bundle
+        run: |
+          ./dist-macos.sh 0.0.0-macos-ci "0.0.${GITHUB_RUN_NUMBER}"
+          dist/build-macos/danser.app/Contents/MacOS/lazer-rules-host/danser-lazer-rules --help
+          ditto -c -k --keepParent dist/build-macos/danser.app dist/build-macos/danser-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: danser-macos
+          path: dist/build-macos/danser-macos.zip

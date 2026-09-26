@@ -7,28 +7,55 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 
 	"github.com/wieku/danser-go/framework/files"
 )
 
-const errMsg = "ffmpeg not found! Please make sure it's installed in danser directory or in PATH. Follow download instructions at https://github.com/Wieku/danser-go/wiki/FFmpeg"
-
 var ffmpegInit bool
 var ffPath string
+var ffmpegMutex sync.Mutex
+
+func findFFmpeg() (string, error) {
+	if directory := strings.TrimSpace(os.Getenv("DANSER_FFMPEG_DIR")); directory != "" {
+		path, err := exec.LookPath(filepath.Join(directory, "ffmpeg"))
+		if err != nil {
+			return "", fmt.Errorf("FFmpeg is unavailable in DANSER_FFMPEG_DIR %q: %w", directory, err)
+		}
+		return filepath.Abs(path)
+	}
+
+	if path, err := files.GetCommandExec("ffmpeg", "ffmpeg"); err == nil {
+		return filepath.Abs(path)
+	}
+
+	if runtime.GOOS == "darwin" {
+		// Finder launches do not inherit the user's shell startup files.
+		for _, directory := range []string{"/opt/homebrew/bin", "/usr/local/bin"} {
+			if path, err := exec.LookPath(filepath.Join(directory, "ffmpeg")); err == nil {
+				return path, nil
+			}
+		}
+		return "", fmt.Errorf("FFmpeg not found. Install it with 'brew install ffmpeg', or set DANSER_FFMPEG_DIR to the directory containing ffmpeg and ffprobe")
+	}
+
+	return "", fmt.Errorf("FFmpeg not found. Install it next to danser or in PATH, or set DANSER_FFMPEG_DIR to the directory containing ffmpeg and ffprobe")
+}
 
 func PrepareFFMpeg(cmdName string, args ...string) (*exec.Cmd, error) {
-	if !ffmpegInit {
-		ffmpegInit = true
+	ffmpegMutex.Lock()
+	defer ffmpegMutex.Unlock()
 
-		ffmpegExec, err := files.GetCommandExec("ffmpeg", "ffmpeg")
+	if !ffmpegInit {
+		ffmpegExec, err := findFFmpeg()
 		if err != nil {
-			return nil, fmt.Errorf(errMsg)
+			return nil, err
 		}
 
 		ffPath = filepath.Dir(ffmpegExec)
+		ffmpegInit = true
 		log.Println("FFmpeg exec location:", ffmpegExec)
-	} else if ffPath == "" {
-		return nil, fmt.Errorf(errMsg)
 	}
 
 	execPath := filepath.Join(ffPath, cmdName)

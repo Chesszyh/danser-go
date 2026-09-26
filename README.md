@@ -15,7 +15,7 @@ danser-go is a GUI/CLI visualisation tool for osu!standard maps. It can also rec
 
 As danser is in development phase, some things may break. If that happens please fill an issue with as much detail as possible.
 
-**WARNING**: Because of MacOS' poor OpenGL support, danser-go won't run on that platform. Please use dual-booted Windows/Linux instead.
+This fork supports Apple Silicon Macs running macOS 15 or newer through an OpenGL 4.1 compatibility path. See the [macOS build and runtime guide](docs/macos-port.md).
 
 ## Examples
 * [Omoi - Chiisana Koi no Uta (Synth Rock Cover) [Kroytz's EX EX] - TAG2 Mirror Collage](https://youtu.be/Vo0Pbpu113Y)

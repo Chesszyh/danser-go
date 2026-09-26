@@ -3,7 +3,8 @@ package pixconv
 /*
 #cgo CFLAGS: -I/usr/include -I.
 #cgo !darwin LDFLAGS: -Wl,-rpath,$ORIGIN -L${SRCDIR} -L${SRCDIR}/../../../ -L/usr/lib/danser -L/usr/lib -lyuv
-#cgo darwin LDFLAGS: -L${SRCDIR}/../../../.deps/macos/lib -lyuv
+#cgo darwin,!danser_external_deps LDFLAGS: -L${SRCDIR}/../../../.deps/macos/lib
+#cgo darwin LDFLAGS: -lyuv
 #include "libyuv.h"
 */
 import "C"

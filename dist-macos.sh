@@ -14,12 +14,14 @@ macos_dir="$app_dir/Contents/MacOS"
 frameworks_dir="$app_dir/Contents/Frameworks"
 resources_dir="$app_dir/Contents/Resources"
 deps_dir=${DANSER_MACOS_DEPS_DIR:-"$repo_dir/.deps/macos"}
+deps_dir=$(CDPATH= cd -- "$deps_dir" && pwd)
+export DANSER_MACOS_DEPS_DIR="$deps_dir"
 dotnet_cmd=${DOTNET:-dotnet}
 version=${1:-dev-macos}
 bundle_version=${2:-0.0.0}
 deployment_target=15.0
 
-for tool in go git install_name_tool codesign iconutil sips; do
+for tool in go git codesign iconutil sips; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		echo "Required build tool is missing: $tool" >&2
 		exit 1
@@ -33,7 +35,7 @@ fi
 
 commit_hash=$(git -C "$repo_dir" rev-parse HEAD)
 
-for library in libSDL3.dylib libbass.dylib libbass_fx.dylib libbassmix.dylib; do
+for library in libSDL3.dylib libbass.dylib libbass_fx.dylib libbassmix.dylib libyuv.a; do
 	if [ ! -f "$deps_dir/lib/$library" ]; then
 		echo "Missing $deps_dir/lib/$library; run tools/macos-deps.sh first" >&2
 		exit 1
@@ -41,6 +43,7 @@ for library in libSDL3.dylib libbass.dylib libbass_fx.dylib libbassmix.dylib; do
 done
 
 git -C "$repo_dir" submodule update --init --recursive third_party/osu
+cd "$repo_dir"
 
 rm -rf "$app_dir"
 mkdir -p "$macos_dir" "$frameworks_dir" "$resources_dir"
@@ -65,9 +68,10 @@ MACOSX_DEPLOYMENT_TARGET="$deployment_target" \
 	CGO_CFLAGS="-O2 -g -mmacosx-version-min=$deployment_target" \
 	CGO_CXXFLAGS="-O2 -g -mmacosx-version-min=$deployment_target" \
 	CGO_LDFLAGS="-mmacosx-version-min=$deployment_target" \
-	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build \
+	DANSER_MACOS_RPATH="@executable_path/../Frameworks" \
+	DANSER_MACOS_GO_TAGS="exclude_cimgui_glfw exclude_cimgui_sdli" \
+	"$repo_dir/tools/macos-go.sh" build \
 	-trimpath \
-	-tags "exclude_cimgui_glfw exclude_cimgui_sdli" \
 	-ldflags "-s -w -X github.com/wieku/danser-go/build.VERSION=$version -X github.com/wieku/danser-go/build.Stream=Release -X github.com/wieku/danser-go/build.CommitHash=$commit_hash" \
 	-o "$macos_dir/danser" .
 cp "$macos_dir/danser" "$macos_dir/danser-cli"
@@ -95,12 +99,6 @@ sips -z 512 512 "$repo_dir/assets/textures/dansercoin256.png" --out "$iconset_di
 sips -z 1024 1024 "$repo_dir/assets/textures/dansercoin256.png" --out "$iconset_dir/icon_512x512@2x.png" >/dev/null
 iconutil -c icns "$iconset_dir" -o "$resources_dir/danser.icns"
 rm -rf "$iconset_dir"
-
-build_rpath="$repo_dir/framework/bass/../../.deps/macos/lib"
-for executable in "$macos_dir/danser" "$macos_dir/danser-cli"; do
-	install_name_tool -delete_rpath "$build_rpath" "$executable"
-	install_name_tool -add_rpath "@executable_path/../Frameworks" "$executable"
-done
 
 cat >"$app_dir/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

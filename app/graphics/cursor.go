@@ -10,6 +10,7 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/buffer"
 	"github.com/wieku/danser-go/framework/graphics/sprite"
 	"github.com/wieku/danser-go/framework/graphics/texture"
+	"github.com/wieku/danser-go/framework/graphics/viewport"
 	"github.com/wieku/danser-go/framework/math/animation"
 	"github.com/wieku/danser-go/framework/math/animation/easing"
 	color2 "github.com/wieku/danser-go/framework/math/color"
@@ -309,6 +310,7 @@ func BeginCursorRender() {
 
 	if useAdditive {
 		cursorSpaceFbo.Bind()
+		viewport.Push(cursorSpaceFbo.GetWidth(), cursorSpaceFbo.GetHeight())
 		cursorSpaceFbo.ClearColor(0.0, 0.0, 0.0, 0.0)
 	}
 
@@ -320,6 +322,7 @@ func BeginCursorRender() {
 func EndCursorRender() {
 	if useAdditive {
 		cursorSpaceFbo.Unbind()
+		viewport.Pop()
 
 		fboBatch.Begin()
 		cursorSpaceFBOSprite.Draw(0, fboBatch)
@@ -355,6 +358,7 @@ func (cursor *Cursor) DrawM(scale float64, batch *batch.QuadBatch, color color2.
 
 	if useAdditive {
 		cursorFbo.Bind()
+		viewport.Push(cursorFbo.GetWidth(), cursorFbo.GetHeight())
 		cursorFbo.ClearColor(0.0, 0.0, 0.0, 0.0)
 	}
 
@@ -362,6 +366,7 @@ func (cursor *Cursor) DrawM(scale float64, batch *batch.QuadBatch, color color2.
 
 	if useAdditive {
 		cursorFbo.Unbind()
+		viewport.Pop()
 
 		fboBatch.Begin()
 

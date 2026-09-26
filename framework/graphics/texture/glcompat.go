@@ -103,6 +103,14 @@ func clearTexture(store *textureStore, clearColor color2.Color) {
 
 	var previousDrawFramebuffer int32
 	gl.GetIntegerv(gl.DRAW_FRAMEBUFFER_BINDING, &previousDrawFramebuffer)
+	scissorEnabled := gl.IsEnabled(gl.SCISSOR_TEST)
+	gl.Disable(gl.SCISSOR_TEST)
+	var colorMask [4]bool
+	var depthMask bool
+	gl.GetBooleani_v(gl.COLOR_WRITEMASK, 0, &colorMask[0])
+	gl.GetBooleanv(gl.DEPTH_WRITEMASK, &depthMask)
+	gl.ColorMaski(0, true, true, true, true)
+	gl.DepthMask(true)
 
 	var framebuffer uint32
 	gl.GenFramebuffers(1, &framebuffer)
@@ -123,6 +131,11 @@ func clearTexture(store *textureStore, clearColor color2.Color) {
 
 	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, uint32(previousDrawFramebuffer))
 	gl.DeleteFramebuffers(1, &framebuffer)
+	gl.ColorMaski(0, colorMask[0], colorMask[1], colorMask[2], colorMask[3])
+	gl.DepthMask(depthMask)
+	if scissorEnabled {
+		gl.Enable(gl.SCISSOR_TEST)
+	}
 }
 
 func copyTextureLayers(source, destination *textureStore, level, width, height, layers int32) {
@@ -134,6 +147,8 @@ func copyTextureLayers(source, destination *textureStore, level, width, height, 
 	var previousReadFramebuffer, previousDrawFramebuffer int32
 	gl.GetIntegerv(gl.READ_FRAMEBUFFER_BINDING, &previousReadFramebuffer)
 	gl.GetIntegerv(gl.DRAW_FRAMEBUFFER_BINDING, &previousDrawFramebuffer)
+	scissorEnabled := gl.IsEnabled(gl.SCISSOR_TEST)
+	gl.Disable(gl.SCISSOR_TEST)
 
 	var readFramebuffer, drawFramebuffer uint32
 	gl.GenFramebuffers(1, &readFramebuffer)
@@ -163,6 +178,9 @@ func copyTextureLayers(source, destination *textureStore, level, width, height, 
 	gl.BindFramebuffer(gl.DRAW_FRAMEBUFFER, uint32(previousDrawFramebuffer))
 	gl.DeleteFramebuffers(1, &readFramebuffer)
 	gl.DeleteFramebuffers(1, &drawFramebuffer)
+	if scissorEnabled {
+		gl.Enable(gl.SCISSOR_TEST)
+	}
 }
 
 func ReadPixels(source Texture, format, dataType uint32, bufferSize int32, destination unsafe.Pointer) {

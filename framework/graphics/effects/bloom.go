@@ -8,6 +8,7 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/blend"
 	"github.com/wieku/danser-go/framework/graphics/buffer"
 	"github.com/wieku/danser-go/framework/graphics/shader"
+	"github.com/wieku/danser-go/framework/graphics/viewport"
 )
 
 type BloomEffect struct {
@@ -88,11 +89,13 @@ func (effect *BloomEffect) SetPower(power float64) {
 
 func (effect *BloomEffect) Begin() {
 	effect.fbo.Bind()
+	viewport.Push(effect.fbo.GetWidth(), effect.fbo.GetHeight())
 	effect.fbo.ClearColor(0, 0, 0, 0)
 }
 
 func (effect *BloomEffect) EndAndRender() {
 	effect.fbo.Unbind()
+	viewport.Pop()
 
 	blend.Push()
 	blend.Enable()

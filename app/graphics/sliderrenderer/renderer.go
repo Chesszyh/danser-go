@@ -12,6 +12,7 @@ import (
 	"github.com/wieku/danser-go/framework/graphics/shader"
 	"github.com/wieku/danser-go/framework/graphics/sprite"
 	"github.com/wieku/danser-go/framework/graphics/texture"
+	"github.com/wieku/danser-go/framework/graphics/viewport"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/math/mutils"
 	"github.com/wieku/danser-go/framework/math/vector"
@@ -122,6 +123,7 @@ func BeginRendererMerge() {
 	gl.DepthFunc(gl.LESS)
 
 	framebuffer.Bind()
+	viewport.Push(framebuffer.GetWidth(), framebuffer.GetHeight())
 	framebuffer.ClearColor(0, 0, 0, 0)
 	framebuffer.ClearDepth()
 
@@ -133,6 +135,7 @@ func EndRendererMerge() {
 	blend.Pop()
 
 	framebuffer.Unbind()
+	viewport.Pop()
 
 	gl.Disable(gl.DEPTH_TEST)
 	gl.DepthMask(false)

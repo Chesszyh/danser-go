@@ -122,5 +122,37 @@ func checkSliderTrackRendering() error {
 		}
 		body.Dispose()
 	}
+	return checkMergedSliderBackingScale(projection)
+}
+
+func checkMergedSliderBackingScale(projection mgl32.Mat4) error {
+	curve := curves.NewMultiCurve([]curves.CurveDef{{CurveType: curves.CLine, Points: []vector.Vector2f{{X: 80, Y: 32}, {X: 112, Y: 32}}}})
+	body := NewBody(curve, false, false, 8)
+	defer body.Dispose()
+	body.DrawBase(0, 1, projection)
+	white := color.NewRGBA(1, 1, 1, 1)
+	for _, scale := range []int{1, 2} {
+		size := 128 * scale
+		output := buffer.NewFrame(size, size, false, false)
+		defer output.Dispose()
+		output.Bind()
+		viewport.Push(size, size)
+		gl.Enable(gl.SCISSOR_TEST)
+		output.ClearColor(0, 0, 0, 0)
+		BeginRendererMerge()
+		body.DrawNormal(projection, vector.NewVec2f(0, 0), 1, white, white, white, white)
+		EndRendererMerge()
+		viewport.Pop()
+		output.Unbind()
+		pixels := make([]byte, size*size*4)
+		texture.ReadPixels(output.Texture(), gl.RGBA, gl.UNSIGNED_BYTE, int32(len(pixels)), gl.Ptr(pixels))
+		center := (96*scale + (size-1-32*scale)*size) * 4
+		if pixels[center] < 200 || pixels[center+3] < 200 || pixels[3] != 0 {
+			return fmt.Errorf("scale %d: merged slider was clipped or moved: %v", scale, pixels[center:center+4])
+		}
+	}
+	if e := gl.GetError(); e != gl.NO_ERROR {
+		return fmt.Errorf("merged slider: OpenGL error 0x%x", e)
+	}
 	return nil
 }

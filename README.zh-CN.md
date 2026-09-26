@@ -15,7 +15,7 @@ danser-go 是用于 osu!standard 谱面的图形／命令行可视化工具，�
 
 Danser 仍在开发中，部分功能可能出现问题。遇到问题时，请提交包含尽可能详细信息的 issue。
 
-**注意**：由于 macOS 的 OpenGL 支持有限，danser-go 无法在该平台运行；请使用双系统中的 Windows 或 Linux。
+此分支通过 OpenGL 4.1 兼容层支持搭载 Apple Silicon、运行 macOS 15 或更新版本的 Mac。构建与运行方法见 [macOS 适配说明](docs/macos-port.md)。
 
 ## 示例
 

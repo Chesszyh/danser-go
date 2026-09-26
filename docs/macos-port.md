@@ -30,7 +30,7 @@ cannot supply it.
 | Beatmap watch/replay for at least 60 seconds | VERIFIED | The fixed 75-second smoke map rendered continuously for over 95 wall-clock seconds. Its generated replay parsed all 4,687 frames, ran to the score screen, and reported a 74,992 ms replay duration. |
 | Screenshot | VERIFIED | `screenshots/macos-smoke-40s.png` is a visually inspected 1280x720 frame with background, storyboard sprite, hit circle, and cursor. |
 | Recording | VERIFIED | `videos/macos-smoke-video.mp4` decodes as 640x360 H.264 at 30 fps plus 48 kHz stereo AAC; duration is 17.0 seconds. An extracted frame was visually inspected. |
-| Retina/high-DPI | BLOCKED (hardware) | The SDL flag, pixel-size framebuffer, logical input coordinates, and `NSHighResolutionCapable` bundle key are implemented. Both bare and bundled runs report 800x534 logical/800x534 pixels because the attached display is 1920x1080 non-Retina; a 2x backing surface cannot be exercised on this host. |
+| Retina/high-DPI | VERIFIED (render targets); physical display transitions unverified | Native regression tests cover 1x/2x/1x Bloom and cursor composition, 2x merged sliders, and storyboard clipping in target pixels. These offscreen checks do not verify moving a visible window between physical displays. |
 | `.app` bundle | VERIFIED | The ad-hoc-signed arm64 bundle has a valid icon/plist, one `@executable_path/../Frameworks` rpath, and a self-contained official osu!lazer rules host. The executable reports `minos 15.0`, the bundled SDL reports `minos 11.0`, and the plist declares macOS 15. `open -n` reached launcher/OpenGL/BASS/FFmpeg using packed assets and `~/Library/Application Support/danser`. |
 | Windows/Linux preservation | VERIFIED | Platform-specific context creation remains behind build tags and graphics selection is capability-based. Native tests pass; the pure `env` and `glcaps` test binaries cross-compile for amd64 Linux and Windows. Runtime testing on those operating systems was not performed. |
 | Final source/documentation/commit audit | VERIFIED | Shell syntax, formatting, `git diff --check`, `go test ./...`, `go build ./...`, generated artifacts, build tags, and the scoped diff were checked before the final commit. |
@@ -74,8 +74,63 @@ outside this port. Settings, databases, screenshots, and videos from the app
 bundle live under `~/Library/Application Support/danser`; the bundle itself
 contains only executables, packed assets, libraries, licensing files, and its
 icon. SDL3, BASS, and the official rules host are bundled; FFmpeg remains a
-runtime dependency discovered through `PATH` (the Homebrew installation above
-supplies it).
+runtime dependency. It is located next to danser or through `PATH`, then in
+`/opt/homebrew/bin` and `/usr/local/bin` on macOS. Finder launches therefore do
+not require a shell-configured Homebrew `PATH`. To select a different installation,
+set `DANSER_FFMPEG_DIR` to the directory containing both `ffmpeg` and `ffprobe`;
+an invalid explicit directory produces an error instead of selecting another copy.
+
+### Custom dependency directories
+
+Use the same `DANSER_MACOS_DEPS_DIR` for preparing dependencies, Go commands, and
+packaging. The Go wrapper disables the default cgo search paths and supplies the
+selected directory for both linking and runtime loading. Plain `go build` and
+`go test` continue to use `.deps/macos`.
+
+```sh
+export DANSER_MACOS_DEPS_DIR="$HOME/Library/Caches/danser native deps"
+./tools/macos-deps.sh
+./tools/macos-go.sh build -o danser .
+./tools/macos-test.sh
+./dist-macos.sh 0.0.0-macos-dev 0.0.0
+```
+
+Use `DANSER_MACOS_GO_TAGS` for additional build tags when using the wrapper.
+Packaged executables use only `@executable_path/../Frameworks` as their library
+search path; they do not retain a reference to the dependency cache.
+
+### Graphics regression checks
+
+`./tools/macos-test.sh` runs all Go tests with native OpenGL checks enabled,
+serializes package execution, and runs the SDL/OpenGL smoke program. The native
+checks use hidden windows and isolated assets, without reading user settings or
+beatmaps. Ordinary `go test ./...` still skips these checks unless
+`DANSER_TEST_OPENGL=1` is set.
+
+The regression suite covers:
+
+- Bloom and additive cursor composition at 1x, 2x, and restored 1x backing sizes.
+- Merged sliders at 1x and 2x, and storyboard clipping in target pixel coordinates.
+- Texture expansion with scissor testing and color/depth write masks, including
+  preservation of caller state and existing texture pixels.
+- Legacy vertex attribute offsets with and without native base-instance support.
+- FFmpeg lookup with a minimal Finder-style `PATH`, explicit directories, and
+  retry after a missing dependency is supplied.
+
+The backing-size tests exercise real GPU rendering into offscreen targets. They
+do not replace a physical monitor-switching or long-duration thermal test.
+The `macOS compatibility` GitHub Actions workflow runs these checks and builds
+the signed app bundle on the `macos-15` arm64 runner for pull requests and pushes
+to `master`. Runner architectures are listed in the
+[GitHub-hosted runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+### 2026-09-26 compatibility fixes
+
+Offscreen passes now set and restore their own viewport and scissor dimensions.
+Storyboard clipping projects into the active viewport rather than the configured
+logical window size. Texture clear/copy fallbacks isolate draw state, and native
+base-instance draws no longer also shift legacy attribute pointers. These
+regressions fail when tested against the pre-fix graphics implementations.
 
 ## Evidence log
 
