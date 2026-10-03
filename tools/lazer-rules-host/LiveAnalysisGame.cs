@@ -58,7 +58,9 @@ internal sealed partial class LiveAnalysisGame : OsuGameBase
     {
         base.LoadComplete();
         Content.Add(dummyApi);
-        Scheduler.Add(startReplay);
+        // RulesetConfigCache populates its entries in a child LoadComplete.
+        // Do not let asynchronous player loading race that initialization.
+        ScheduleAfterChildren(startReplay);
         _ = Task.Run(readInput);
     }
 
@@ -110,6 +112,7 @@ internal sealed partial class LiveAnalysisGame : OsuGameBase
 
     private void startReplay()
     {
+        Diagnostics.Log($"Available rulesets after child initialization: {string.Join(", ", RulesetStore.AvailableRulesets.Select(r => r.ShortName))}");
         try
         {
             var flat = new FlatWorkingBeatmap(request.BeatmapPath);

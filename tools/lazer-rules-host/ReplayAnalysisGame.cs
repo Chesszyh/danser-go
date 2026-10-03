@@ -52,7 +52,9 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
         base.LoadComplete();
         Diagnostics.Log("Analysis game loaded");
         Content.Add(dummyApi);
-        Scheduler.Add(startReplay);
+        // RulesetConfigCache populates its entries in a child LoadComplete.
+        // Do not let asynchronous player loading race that initialization.
+        ScheduleAfterChildren(startReplay);
     }
 
     protected override void Update()
@@ -80,6 +82,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
 
     private void startReplay()
     {
+        Diagnostics.Log($"Available rulesets after child initialization: {string.Join(", ", RulesetStore.AvailableRulesets.Select(r => r.ShortName))}");
         Diagnostics.Log("Loading beatmap and replay");
         try
         {
