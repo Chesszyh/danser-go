@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 45
     env:
       GOMAXPROCS: '2'
+      PYTHONDONTWRITEBYTECODE: '1'
       DANSER_MACOS_DEPS_DIR: ${{ github.workspace }}/.deps/macos
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +32,7 @@ jobs:
       - name: Check dependency cache failure handling
         run: |
           python3 tools/test_macos_deps.py
+          python3 tools/test_macos_bundle_smoke.py
           python3 tools/license-preflight/test_collect_notices.py
       - uses: actions/cache@v4
         id: native-cache

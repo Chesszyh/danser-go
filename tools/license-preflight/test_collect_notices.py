@@ -30,7 +30,7 @@ class Tests(unittest.TestCase):
                     {"Path": "actual/module", "Version": "v2.0.0", "Dir": str(module)})) as command:
                 m.read_go(a, c)
             self.assertEqual(command.call_args.args[0],
-                             ["go", "list", "-mod=readonly", "-m", "-json", "actual/module@v2.0.0"])
+                             [str(goroot / "bin/go"), "list", "-mod=readonly", "-m", "-json", "actual/module@v2.0.0"])
             self.assertFalse(c.errors)
             self.assertEqual(c.records[0]["key"], "actual/module@v2.0.0")
 

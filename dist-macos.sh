@@ -89,6 +89,7 @@ rm -f "$build_dir/notices-incomplete"
 if ! python3 "$repo_dir/tools/license-preflight/collect_notices.py" \
 	--repo "$repo_dir" --host "$macos_dir/lazer-rules-host" \
 	--go-binary "$macos_dir/danser" --native-notices "$deps_dir/licenses" \
+	--go-root "$(go env GOROOT)" \
 	--out "$build_dir/collected-notices"; then
 	echo "Dependency notice collection failed; runtime diagnostics can continue, but archiving/release is blocked" >&2
 	touch "$build_dir/notices-incomplete"

@@ -179,10 +179,13 @@ class Collector:
         self.write("INDEX.txt", ("\n".join(lines) + "\n").encode(), "generated")
 
 def read_go(a, collector):
-    env = dict(os.environ, GOPROXY="off", GOSUMDB="off")
+    env = dict(os.environ, GOPROXY="off", GOSUMDB="off", GOTOOLCHAIN="local")
     try:
+        goroot = a.go_root or Path(subprocess.check_output(["go", "env", "GOROOT"],
+                                                           text=True, env=env).strip())
+        go = str(goroot / "bin/go") if a.go_root else "go"
         build = (a.go_build_info.read_text() if a.go_build_info else
-                 subprocess.check_output(["go", "version", "-m", str(a.go_binary)],
+                 subprocess.check_output([go, "version", "-m", str(a.go_binary)],
                                          text=True, env=env))
         # Query only modules actually linked into this binary. Walking "all"
         # expands unrelated/platform-specific modules absent from this cache.
@@ -191,10 +194,8 @@ def read_go(a, collector):
             actual = dependency.get("replacement") or dependency
             requested.append(actual["path"] + "@" + actual["version"])
         modules_text = (a.go_module_list.read_text() if a.go_module_list else
-                        subprocess.check_output(["go", "list", "-mod=readonly", "-m", "-json", *requested],
+                        subprocess.check_output([go, "list", "-mod=readonly", "-m", "-json", *requested],
                                                 cwd=a.repo, text=True, env=env) if requested else "")
-        goroot = a.go_root or Path(subprocess.check_output(["go", "env", "GOROOT"],
-                                                           text=True, env=env).strip())
     except (subprocess.CalledProcessError, FileNotFoundError) as exc:
         collector.errors.append("Go inventory failed: " + str(exc))
         return

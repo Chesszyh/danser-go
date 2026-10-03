@@ -24,6 +24,23 @@ def run(*args, **kwargs):
         raise
 
 
+def verify_rejudge(response, expected_osu, object_count):
+    assert response["protocolVersion"] == 3
+    assert response["engine"]["osuSourceRevision"] == expected_osu
+    assert response["replay"]["frameCount"] == 4687
+    judgements = response["judgements"]
+    assert {event["objectIndex"] for event in judgements} == set(range(object_count))
+    # TimeAbsolute is clamped separately for each osu! hit object. Spinner
+    # callbacks can therefore move backwards slightly; keep callback/snapshot
+    # order intact rather than sorting or requiring monotonic timestamps.
+    for event in judgements:
+        assert all(math.isfinite(event[key]) for key in ("judgedAt", "hitError", "objectEndTime"))
+        assert 0 <= event["judgedAt"] <= 80_000
+        assert abs(event["judgedAt"] - event["objectEndTime"] - event["hitError"]) < 0.00001
+    for key in ("performance", "fullComboPerformance", "perfectPerformance"):
+        assert math.isfinite(response["rejudged"][key]["total"])
+
+
 def main():
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         raise SystemExit("Bundle smoke testing requires Apple Silicon macOS")
@@ -84,14 +101,9 @@ def main():
                     raise RuntimeError("Rules host timed out; see rules-host.log and rules-host-sample.txt")
             assert process.returncode == 0, "Rules host failed; see rules-host.log"
         response = json.loads(response_file.read_text())
-        assert response["protocolVersion"] == 3
-        assert response["engine"]["osuSourceRevision"] == expected_osu
-        assert response["replay"]["frameCount"] == 4687
-        judgements = response["judgements"]
-        assert judgements and all(a["judgedAt"] <= b["judgedAt"]
-                                  for a, b in zip(judgements, judgements[1:]))
-        for key in ("performance", "fullComboPerformance", "perfectPerformance"):
-            assert math.isfinite(response["rejudged"][key]["total"])
+        object_lines = (fixture / "macos-smoke.osu").read_text().split("[HitObjects]", 1)[1].splitlines()
+        object_count = sum(bool(line.strip()) and not line.startswith("//") for line in object_lines)
+        verify_rejudge(response, expected_osu, object_count)
         patch = json.dumps({
             "General": {"OsuSongsDir": str(fixture.parent)},
             "Graphics": {"Fullscreen": False, "WindowWidth": 640, "WindowHeight": 360,
