@@ -122,6 +122,31 @@ cp "$MOCK_SOURCE" "$output"
         self.assertEqual((destination / "CMakeLists.txt").read_text(), "keep existing")
         self.assertEqual(list(self.root.glob("*.partial.*")), [])
 
+    def test_git_source_uses_exact_revision_and_recovers_dirty_cache(self):
+        upstream = self.root / "upstream"
+        upstream.mkdir()
+        subprocess.run(["git", "init", "-q", str(upstream)], check=True)
+        cmake = upstream / "CMakeLists.txt"
+        cmake.write_text("pinned source")
+        subprocess.run(["git", "-C", str(upstream), "add", "CMakeLists.txt"], check=True)
+        commit = ["git", "-C", str(upstream), "-c", "user.name=Test", "-c",
+                  "user.email=test@example.invalid", "commit", "-qm"]
+        subprocess.run(commit + ["pinned"], check=True)
+        revision = subprocess.check_output(["git", "-C", str(upstream), "rev-parse", "HEAD"],
+                                           text=True).strip()
+        cmake.write_text("newer source")
+        subprocess.run(["git", "-C", str(upstream), "add", "CMakeLists.txt"], check=True)
+        subprocess.run(commit + ["newer"], check=True)
+        destination = self.root / "git source"
+        command = "checkout_git_source " + shlex.quote(str(upstream)) + " " + revision + " " + shlex.quote(str(destination))
+        self.run_shell(command)
+        self.assertEqual((destination / "CMakeLists.txt").read_text(), "pinned source")
+        self.run_shell(command)
+        (destination / "CMakeLists.txt").write_text("corrupt cached source")
+        self.run_shell(command)
+        self.assertEqual((destination / "CMakeLists.txt").read_text(), "pinned source")
+        self.assertEqual(list(self.root.glob("*.partial.*")), [])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

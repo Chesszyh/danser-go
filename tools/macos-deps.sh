@@ -7,7 +7,7 @@ if [ "$(uname -s)" != "Darwin" ]; then
 	exit 1
 fi
 
-for tool in curl unzip tar cmake ninja file shasum; do
+for tool in curl unzip tar cmake ninja file shasum git; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		echo "Required dependency tool is missing: $tool" >&2
 		exit 1
@@ -81,6 +81,31 @@ extract_archive() (
 	mv "$temporary" "$destination"
 )
 
+checkout_git_source() (
+	url=$1
+	revision=$2
+	destination=$3
+	if [ -d "$destination/.git" ] && \
+		[ "$(git -C "$destination" rev-parse HEAD)" = "$revision" ] && \
+		[ -z "$(git -C "$destination" status --porcelain)" ]; then
+		return 0
+	fi
+	temporary=$(mktemp -d "$destination.partial.XXXXXX")
+	trap 'rm -rf "$temporary"' EXIT HUP INT TERM
+	git -C "$temporary" init -q
+	attempt=1
+	until git -C "$temporary" fetch --no-tags --depth=1 "$url" "$revision"; do
+		[ "$attempt" -lt 3 ] || return 1
+		attempt=$((attempt + 1))
+		sleep 2
+	done
+	git -C "$temporary" checkout --detach -q FETCH_HEAD
+	[ "$(git -C "$temporary" rev-parse HEAD)" = "$revision" ]
+	[ -f "$temporary/CMakeLists.txt" ]
+	rm -rf "$destination"
+	mv "$temporary" "$destination"
+)
+
 # Official archives verified on 2026-10-03. Fail closed if a rolling URL changes.
 download "https://www.un4seen.com/files/bass24-osx.zip" "$archives_dir/bass.zip" \
 	dfadd6238896b02b144b2870655fb9ee2445fc84d5c00f7e1c56faf9343ce59c
@@ -112,10 +137,9 @@ cmake -S "$sdl_src" -B "$sdl_build" -G Ninja \
 cmake --build "$sdl_build" --target SDL3-shared
 cp -f "$sdl_build/libSDL3.0.dylib" "$lib_dir/libSDL3.dylib"
 
-libyuv_archive="$archives_dir/libyuv-$libyuv_revision.tar.gz"
-download "https://chromium.googlesource.com/libyuv/libyuv/+archive/$libyuv_revision.tar.gz" "$libyuv_archive" \
-	66f663e4be650fe43aec0f1148e363704ea3c8052467a98266ce4300f42749b0
-extract_archive "$libyuv_archive" "$libyuv_src" 0
+# Gitiles generates archives dynamically; compressed archive bytes are not a
+# stable integrity identifier. Verify the pinned Git commit instead.
+checkout_git_source "https://chromium.googlesource.com/libyuv/libyuv" "$libyuv_revision" "$libyuv_src"
 cp "$libyuv_src/LICENSE" "$licenses_dir/libyuv-LICENSE.txt"
 cp "$libyuv_src/PATENTS" "$licenses_dir/libyuv-PATENTS.txt"
 cp "$libyuv_src/AUTHORS" "$licenses_dir/libyuv-AUTHORS.txt"
