@@ -28,6 +28,8 @@ jobs:
           global-json-file: third_party/osu/global.json
       - name: Install build and recording tools
         run: brew install cmake ninja ffmpeg
+      - name: Check dependency cache failure handling
+        run: python3 tools/test_macos_deps.py
       - uses: actions/cache@v4
         with:
           path: .deps/macos
@@ -39,9 +41,24 @@ jobs:
       - name: Build and verify app bundle
         run: |
           ./dist-macos.sh 0.0.0-macos-ci "0.0.${GITHUB_RUN_NUMBER}"
-          dist/build-macos/danser.app/Contents/MacOS/lazer-rules-host/danser-lazer-rules --help
+          python3 tools/macos-bundle-smoke.py
           ditto -c -k --keepParent dist/build-macos/danser.app dist/build-macos/danser-macos.zip
+          cd dist/build-macos
+          shasum -a 256 danser-macos.zip > SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: danser-macos
-          path: dist/build-macos/danser-macos.zip
+          path: |
+            dist/build-macos/danser-macos.zip
+            dist/build-macos/SHA256SUMS
+            dist/build-macos/build-info.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: danser-macos-verification
+          path: dist/build-macos/verification
+          if-no-files-found: ignore
+          retention-days: 7

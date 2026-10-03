@@ -83,6 +83,7 @@ cp "$deps_dir/lib/libbass_fx.dylib" "$frameworks_dir/"
 cp "$deps_dir/lib/libbassmix.dylib" "$frameworks_dir/"
 cp "$repo_dir/LICENSE" "$repo_dir/CREDITS.md" "$resources_dir/"
 cp "$repo_dir/third_party/osu/LICENCE" "$resources_dir/osu-LICENCE"
+cp -R "$deps_dir/licenses" "$resources_dir/ThirdPartyNotices"
 
 iconset_dir="$build_dir/danser.iconset"
 rm -rf "$iconset_dir"
