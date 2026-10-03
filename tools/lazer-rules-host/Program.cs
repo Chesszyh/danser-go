@@ -23,6 +23,9 @@ internal static class Program
 
         try
         {
+            if (args.Length == 3 && args[0] == "audit-fonts")
+                return FontAudit.Run(args[1], args[2]);
+
             Logger.Enabled = false;
 
             if (args.FirstOrDefault() == "live")

@@ -7,10 +7,13 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import queue
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 
 
 def run(*args, **kwargs):
@@ -39,6 +42,70 @@ def verify_rejudge(response, expected_osu, object_count):
         assert abs(event["judgedAt"] - event["objectEndTime"] - event["hitError"]) < 0.00001
     for key in ("performance", "fullComboPerformance", "perfectPerformance"):
         assert math.isfinite(response["rejudged"][key]["total"])
+
+
+def verify_live(host, beatmap, env, evidence, expected_osu, object_count):
+    messages = queue.Queue()
+    deadline = time.monotonic() + 180
+    with (evidence / "rules-host-live.log").open("w") as errors, \
+            (evidence / "rules-host-live.jsonl").open("w") as transcript:
+        process = subprocess.Popen([str(host), "live", "--beatmap", str(beatmap),
+                                    "--mods-json", '[{"acronym":"NF"}]'], env=env,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=errors,
+                                   text=True, bufsize=1)
+
+        def read_output():
+            for line in process.stdout:
+                messages.put(line)
+            messages.put(None)
+
+        threading.Thread(target=read_output, daemon=True).start()
+
+        def receive():
+            remaining = deadline - time.monotonic()
+            assert remaining > 0, "Live host exceeded its total timeout"
+            line = messages.get(timeout=min(60, remaining))
+            assert line is not None, "Live host closed before completing the protocol"
+            transcript.write(line); transcript.flush()
+            message = json.loads(line)
+            assert message["protocolVersion"] == 3
+            assert message["type"] != "error", message.get("message")
+            return message
+
+        def send(message):
+            process.stdin.write(json.dumps(message) + "\n")
+            process.stdin.flush()
+
+        try:
+            ready = receive()
+            assert ready["type"] == "ready" and ready["engine"]["osuSourceRevision"] == expected_osu
+            covered = set()
+            final_object_judged = False
+            for frame_id, position in enumerate(range(0, 75_001, 50)):
+                send({"type": "frame", "frameId": frame_id, "time": position,
+                      "x": 256, "y": 192, "left": False, "right": False, "smoke": False})
+                result = receive()
+                assert result["type"] == "frame" and result["frameId"] == frame_id
+                for judgement in result.get("judgements") or []:
+                    covered.add(judgement["objectIndex"])
+                    if judgement["objectIndex"] == object_count - 1 and judgement["objectPart"] == "spinner":
+                        final_object_judged = True
+                if final_object_judged:
+                    break
+            assert covered == set(range(object_count)) and final_object_judged
+            send({"type": "finish", "frameId": frame_id + 1, "time": position,
+                  "x": 256, "y": 192, "left": False, "right": False, "smoke": False})
+            process.stdin.close()
+            complete = receive()
+            assert complete["type"] == "complete"
+            for key in ("performance", "fullComboPerformance", "perfectPerformance"):
+                assert math.isfinite(complete["score"][key]["total"])
+            process.wait(timeout=30)
+            assert process.returncode == 0
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
 
 
 def main():
@@ -79,6 +146,12 @@ def main():
         for key in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "DANSER_MACOS_DEPS_DIR"):
             env.pop(key, None)
         host = app / "Contents/MacOS/lazer-rules-host/danser-lazer-rules"
+        font_dir = app / "Contents/Resources/LazerFonts"
+        audit = run(str(host), "audit-fonts", str(font_dir / "OPEN_FONT_PROVENANCE.json"),
+                    str(font_dir / "pinned-resource-lock.json.gz"), env=env, capture_output=True)
+        font_report = json.loads(audit.stdout)
+        assert font_report["status"] == "passed" and font_report["restrictedOriginalPayloads"] == 0
+        (evidence / "embedded-font-audit.json").write_text(audit.stdout)
         env["DANSER_LAZER_DIAGNOSTICS"] = "1"
         response_file = evidence / "rules-host-rejudge.json"
         with response_file.open("w") as output, (evidence / "rules-host.log").open("w") as log:
@@ -104,6 +177,7 @@ def main():
         object_lines = (fixture / "macos-smoke.osu").read_text().split("[HitObjects]", 1)[1].splitlines()
         object_count = sum(bool(line.strip()) and not line.startswith("//") for line in object_lines)
         verify_rejudge(response, expected_osu, object_count)
+        verify_live(host, fixture / "macos-smoke.osu", env, evidence, expected_osu, object_count)
         patch = json.dumps({
             "General": {"OsuSongsDir": str(fixture.parent)},
             "Graphics": {"Fullscreen": False, "WindowWidth": 640, "WindowHeight": 360,
@@ -143,7 +217,9 @@ def main():
             os.environ.get("GITHUB_REPOSITORY", "Chesszyh/danser-go") + "/actions/runs/" +
             os.environ.get("GITHUB_RUN_ID", "local"),
         "checks": ["native Go/OpenGL regressions (previous workflow step)", "relocated app signature",
-                   "self-contained rules-host rejudgement", "replay screenshot", "video/audio recording decode"],
+                   "embedded Inter font replacement audit", "self-contained rules-host rejudgement",
+                   "live rules-host frame/finish protocol", "replay screenshot", "video/audio recording decode"],
+        "resourceFonts": font_report,
         "limitations": ["ad-hoc signed, not Developer ID signed or notarized", "external FFmpeg CLI required",
                         "physical Retina/display transitions, interactive launcher lifecycle and thermal behaviour untested"],
     }

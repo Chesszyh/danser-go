@@ -22,6 +22,13 @@ MAX_TEXT = 4 * 1024 * 1024
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
+def file_sha(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
 def safe(value):
     return re.sub(r"[^A-Za-z0-9._+-]", "_", value)
 
@@ -155,10 +162,39 @@ class Collector:
                 self.gaps.append(key + ": package MIT does not cover native FFmpeg/BASS payload")
             if archive:
                 record["packageSha256"] = sha(archive.read_bytes())
+            elif folder:
+                archives = list(folder.glob("*.nupkg"))
+                if len(archives) == 1 and not archives[0].is_symlink():
+                    record["packageSha256"] = file_sha(archives[0])
             self.records.append(record)
         finally:
             if z:
                 z.close()
+
+    def supplement(self, archive):
+        if not archive.is_file():
+            return
+        packages = {r["key"]: r for r in self.records if r.get("ecosystem") == "NuGet"}
+        with zipfile.ZipFile(archive) as bundle:
+            manifest = json.loads(bundle.read("manifest.json"))
+            if not set(packages).intersection(manifest["packages"]):
+                return
+            self.write("Supplemental/manifest.json", bundle.read("manifest.json"), archive)
+            for key, supplement in manifest["packages"].items():
+                if key not in packages:
+                    continue
+                for notice in supplement["notices"]:
+                    data = bundle.read(notice["file"])
+                    if sha(data) != notice["sha256"]:
+                        self.errors.append("Supplemental notice hash mismatch: " + notice["file"])
+                        continue
+                    packages[key]["notices"].append(self.write("Supplemental/" + notice["file"], data, notice["sourceUrl"]))
+                if packages[key]["notices"]:
+                    missing = "No readable notice body in " + key + "; resolve exact source/standard licence plus copyright"
+                    self.gaps = [gap for gap in self.gaps if gap != missing]
+            warnings = manifest.get("unresolvedByCollection", {})
+            self.write("Supplemental/UPSTREAM-SCOPE-NOTES.json", (json.dumps(warnings, indent=2) + "\n").encode(), archive)
+            self.gaps.append("See Supplemental/UPSTREAM-SCOPE-NOTES.json and any build-specific font audit for source/permission scope")
 
     def finish(self):
         data = {"schemaVersion": 1, "packages": self.records, "binaries": self.binaries,
@@ -233,6 +269,8 @@ def main():
     p.add_argument("--native-notices", type=Path)
     p.add_argument("--font-notices", type=Path, default=Path(__file__).parent / "font-notices")
     p.add_argument("--ffmpeg-notices", type=Path, default=Path(__file__).parent / "ffmpeg-notices")
+    p.add_argument("--supplemental-notices", type=Path, default=Path(__file__).parent / "supplemental-notices.zip")
+    p.add_argument("--resource-font-audit", type=Path)
     p.add_argument("--strict-review", action="store_true", help="Also fail on unresolved review items")
     a = p.parse_args()
     c = Collector(a.out)
@@ -304,6 +342,23 @@ def main():
         read_go(a, c)
     elif a.host:
         c.errors.append("Go inventory required: provide --go-binary or both saved Go inputs")
+    c.supplement(a.supplemental_notices)
+    if a.resource_font_audit:
+        audit = json.loads(a.resource_font_audit.read_text())
+        dll = a.host / "osu.Game.Resources.dll"
+        if (audit.get("status") != "passed" or audit.get("restrictedOriginalPayloads") != 0 or
+                audit.get("replacementFont") != "Inter" or audit.get("assemblySha256") != file_sha(dll)):
+            c.errors.append("Font audit does not match the published resource assembly")
+        else:
+            c.write("Evidence/embedded-font-audit.json", a.resource_font_audit.read_bytes(), a.resource_font_audit)
+            c.write("FONT-REPLACEMENT.txt", (
+                "This build uses a locally rebuilt osu.Game.Resources assembly.\n"
+                "Torus, Torus-Alternate and Venera are compatibility keys backed by genuine Inter font data under OFL-1.1.\n"
+                "The original restricted glyph descriptors and atlases are absent; the exact shipped DLL was audited.\n"
+                "Upstream font-permission warnings in Supplemental/UPSTREAM-SCOPE-NOTES.json describe the replaced upstream payload, not the Inter replacement.\n"
+                "Other upstream resource licences and the separately recorded provenance limitations still apply.\n"
+                "See Resources/LazerFonts and Evidence/embedded-font-audit.json for the current build's source, licence and checks.\n"
+            ).encode(), a.resource_font_audit)
     c.finish()
     print(json.dumps({"output": str(a.out), "packages": len(c.records),
                       "reviewItems": len(set(c.gaps)), "fatalErrors": len(set(c.errors))}))

@@ -1,0 +1,7 @@
+TagLibSharp 2.3.0 and OpenTabletDriver 0.6.7 are included as separately replaceable managed DLLs.
+TagLibSharp: LGPL-2.1-only. Copyright (c) 2006-2007 Brian Nickel. Copyright (c) 2009-2020 Other contributors.
+OpenTabletDriver: LGPL-3.0-or-later. Package authors: InfinityGhost, X9VoiD.
+Full licence texts are in notices/. GNU GPLv3 is included because LGPLv3 incorporates it.
+The release source package must include the source archives identified in SOURCES.json and corresponding application source/build instructions.
+Users may modify and replace compatible versions of these libraries. Do not restrict reverse engineering for debugging such modifications.
+The pinned source archive hashes are retained verification results; verify downloads against them before release.

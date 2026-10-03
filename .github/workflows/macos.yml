@@ -23,7 +23,8 @@ jobs:
           submodules: recursive
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: '1.26.1'
+          cache: false
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: third_party/osu/global.json
@@ -34,6 +35,9 @@ jobs:
           python3 tools/test_macos_deps.py
           python3 tools/test_macos_bundle_smoke.py
           python3 tools/license-preflight/test_collect_notices.py
+          python3 tools/lazer-fonts/test_replace_restricted_fonts.py
+          python3 tools/source-package/test_package_source.py
+          python3 tools/test_publish_macos_release.py
       - uses: actions/cache@v4
         id: native-cache
         with:
@@ -50,30 +54,29 @@ jobs:
       - uses: actions/cache/restore@v4
         id: go-build-cache
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: macos-arm64-go-release-${{ hashFiles('go.mod', 'go.sum') }}
+          path: ~/Library/Caches/go-build
+          key: macos-arm64-go-build-v2-${{ hashFiles('go.mod', 'go.sum') }}
       - name: Test including native OpenGL regressions
         run: ./tools/macos-test.sh
       - name: Cache successful Go compilation
         if: steps.go-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: macos-arm64-go-release-${{ hashFiles('go.mod', 'go.sum') }}
+          path: ~/Library/Caches/go-build
+          key: macos-arm64-go-build-v2-${{ hashFiles('go.mod', 'go.sum') }}
       - name: Build app and self-contained rules host
-        run: ./dist-macos.sh 0.0.0-macos-ci "0.0.${GITHUB_RUN_NUMBER}"
+        run: ./dist-macos.sh 0.0.0-macos-preview "0.0.${GITHUB_RUN_NUMBER}"
       - name: Verify relocated app with real replay
         run: python3 tools/macos-bundle-smoke.py
       - name: Archive verified bundle
         run: |
           test ! -f dist/build-macos/notices-incomplete
+          python3 tools/source-package/package_source.py --repo "$PWD" --fetch \
+            --resource-source "$PWD/.deps/lazer-resources/source" \
+            --resource-kit "$PWD/tools/lazer-fonts" --require-open-font-sources
           ditto -c -k --keepParent dist/build-macos/danser.app dist/build-macos/danser-macos.zip
           cd dist/build-macos
-          shasum -a 256 danser-macos.zip > SHA256SUMS
+          shasum -a 256 danser-macos.zip danser-macos-source.tar.gz danser-macos-source-manifest.json build-info.json > SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: danser-macos
@@ -81,6 +84,9 @@ jobs:
             dist/build-macos/danser-macos.zip
             dist/build-macos/SHA256SUMS
             dist/build-macos/build-info.json
+            dist/build-macos/danser-macos-source.tar.gz
+            dist/build-macos/danser-macos-source-manifest.json
+          compression-level: 0
           if-no-files-found: error
           retention-days: 7
       - name: Preserve verification evidence
@@ -99,3 +105,25 @@ jobs:
           path: dist/build-macos/collected-notices
           if-no-files-found: ignore
           retention-days: 7
+
+  publish-preview:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'Release macOS Inter preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: danser-macos-2026.10.03
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: danser-macos
+          path: release-assets
+      - name: Publish only the verified master build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish-macos-release.py release-assets

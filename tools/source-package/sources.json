@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "archives": [
+    {
+      "component": "FFmpeg",
+      "version": "4.3.3",
+      "file": "ffmpeg-4.3.3.tar.xz",
+      "url": "https://ffmpeg.org/releases/ffmpeg-4.3.3.tar.xz",
+      "sha256": "9f0a68fbd74feb4e50dc220bddd59d84626774a53687fb737806ae00e5c6e9e6",
+      "when": "host"
+    },
+    {
+      "component": "taglib-sharp",
+      "file": "lgpl-sources/taglib-sharp-b5ae84f2e84087bf160bb0471420200dd2b5d809.tar.gz",
+      "url": "https://codeload.github.com/mono/taglib-sharp/tar.gz/b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "sha256": "2e54eb7382991caeafd2ac414ca5ab6ca2a4d2b5fe9bba4d8abff3fc1b308195",
+      "commit": "b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "when": "host"
+    },
+    {
+      "component": "OpenTabletDriver",
+      "file": "lgpl-sources/OpenTabletDriver-736003ed72c8bbb28033b039d5a0bb76c344145c.tar.gz",
+      "url": "https://codeload.github.com/OpenTabletDriver/OpenTabletDriver/tar.gz/736003ed72c8bbb28033b039d5a0bb76c344145c",
+      "sha256": "095309b615888620fe90ca6239459864e6fe25cb84a2cf6bab9ce7a9292c6f41",
+      "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c",
+      "when": "host"
+    }
+  ],
+  "native": {
+    "libyuv": {
+      "commit": "eb6e7bb63738e29efd82ea3cf2a115238a89fa51",
+      "repository": "https://chromium.googlesource.com/libyuv/libyuv"
+    },
+    "SDL3": {
+      "version": "3.4.16",
+      "url": "https://github.com/libsdl-org/SDL/releases/download/release-3.4.16/SDL3-3.4.16.tar.gz",
+      "sha256": "7322236cd12090c3eb40b9728be4d49c76f66ad17d04369584d4ecad5cf77c68"
+    }
+  },
+  "materials": [
+    {
+      "file": "ffmpeg-build/SOURCES.json",
+      "sha256": "1d4da7e458fba2ef8c76270d35f94041f8319292feb4c12288dddda75361a0c2",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-build/build-macOS.sh",
+      "sha256": "d5351816fcb41151ef76cd9a9aebe2f657c267d3c704ead318730a828535da9a",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-build/combine_dylibs.sh",
+      "sha256": "3267ca4a868318374a6be69a442f055dcd3782c7ea25691f4a5692f02ff7b2be",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-build/common.sh",
+      "sha256": "ca6b50d222cfd11661709bbd5a2082c67375cc6c22ab73968f31973e8f3c724f",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-notices/COPYING.LGPLv2.1",
+      "sha256": "b634ab5640e258563c536e658cad87080553df6f34f62269a21d554844e58bfe",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-notices/FFmpeg-4.3.3-NOTICE.txt",
+      "sha256": "679468ba0d81a94361b07e7e8aefc66e7df94ef06b7d599f67e779b7906cb6a8",
+      "when": "host"
+    },
+    {
+      "file": "ffmpeg-notices/SOURCES.json",
+      "sha256": "37388584b21167e8949721a790366de736daee9bd469aa34adcccd3fa415faaa",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/NOTICE.txt",
+      "sha256": "9faabb17af6bb0cc2a99351367be915c0ffcf30013f24b6444382e695c09a379",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/SHA256SUMS",
+      "sha256": "10e8c7a4b11454dc3116a2e0abdd16f31ab513f5b59f26547668a454221ab317",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/SOURCES.json",
+      "sha256": "75913c344d78a633a49c20484e8b3814faa55d4b516ac440ce98a24087b04b50",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/notices/OpenTabletDriver/COPYING.GPLv3",
+      "sha256": "5c4704f4d20364d99017de927389eaae10b87f9e6163bf79e652821dbbaaae69",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/notices/OpenTabletDriver/LICENSE",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/notices/TagLibSharp/COPYING",
+      "sha256": "6095e9ffa777dd22839f7801aa845b31c9ed07f3d6bf8a26dc5d2dec8ccc0ef3",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/notices/TagLibSharp-COPYING",
+      "sha256": "6095e9ffa777dd22839f7801aa845b31c9ed07f3d6bf8a26dc5d2dec8ccc0ef3",
+      "when": "host"
+    },
+    {
+      "file": "lgpl-sources/prior-verification-summary.json",
+      "sha256": "0d8aa45187ad13e122061e972ecbdd7f03b09fc98c27f7559c9eddf22b68725c",
+      "when": "host"
+    }
+  ]
+}

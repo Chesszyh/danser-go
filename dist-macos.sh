@@ -48,6 +48,10 @@ cd "$repo_dir"
 rm -rf "$app_dir"
 mkdir -p "$macos_dir" "$frameworks_dir" "$resources_dir"
 
+lazer_resources_dir="$repo_dir/.deps/lazer-resources"
+export DANSER_LAZER_RESOURCES_DIR="$lazer_resources_dir"
+bash "$repo_dir/tools/lazer-fonts/build-resources.sh"
+
 (
 	cd "$repo_dir/third_party/osu"
 	DOTNET_CLI_TELEMETRY_OPTOUT=1 "$dotnet_cmd" publish \
@@ -56,6 +60,8 @@ mkdir -p "$macos_dir" "$frameworks_dir" "$resources_dir"
 		--runtime osx-arm64 \
 		--self-contained true \
 		--output "$macos_dir/lazer-rules-host" \
+		-p:RestorePackagesPath="$lazer_resources_dir/packages" \
+		-p:RestoreConfigFile="$lazer_resources_dir/NuGet.Config" \
 		-m:2
 )
 
@@ -63,6 +69,14 @@ if [ ! -x "$macos_dir/lazer-rules-host/danser-lazer-rules" ]; then
 	echo "Official osu!lazer rules host was not published" >&2
 	exit 1
 fi
+
+python3 - "$lazer_resources_dir" "$macos_dir/lazer-rules-host" <<'PY'
+import hashlib,json,sys
+from pathlib import Path
+work,host=map(Path,sys.argv[1:]);expected=json.loads((work/'rebuilt-package.json').read_text())
+actual=hashlib.sha256((host/'osu.Game.Resources.dll').read_bytes()).hexdigest()
+assert actual==expected['assemblySha256'], 'Publish did not use the rebuilt Inter resource assembly'
+PY
 
 MACOSX_DEPLOYMENT_TARGET="$deployment_target" \
 	CGO_CFLAGS="-O2 -g -mmacosx-version-min=$deployment_target" \
@@ -84,12 +98,23 @@ cp "$deps_dir/lib/libbassmix.dylib" "$frameworks_dir/"
 cp "$repo_dir/LICENSE" "$repo_dir/CREDITS.md" "$resources_dir/"
 cp "$repo_dir/third_party/osu/LICENCE" "$resources_dir/osu-LICENCE"
 cp -R "$deps_dir/licenses" "$resources_dir/ThirdPartyNotices"
+mkdir -p "$resources_dir/LazerFonts"
+cp "$lazer_resources_dir/source/osu.Game.Resources/Fonts/OPEN_FONT_PROVENANCE.json" \
+	"$lazer_resources_dir/source/osu.Game.Resources/Fonts/OPEN_FONT_SUBSTITUTIONS.txt" \
+	"$lazer_resources_dir/source/osu.Game.Resources/Fonts/Inter/OFL.txt" \
+	"$repo_dir/tools/lazer-fonts/pinned-resource-lock.json.gz" \
+	"$lazer_resources_dir/rebuilt-package.json" "$resources_dir/LazerFonts/"
+"$macos_dir/lazer-rules-host/danser-lazer-rules" audit-fonts \
+	"$resources_dir/LazerFonts/OPEN_FONT_PROVENANCE.json" \
+	"$resources_dir/LazerFonts/pinned-resource-lock.json.gz" > "$build_dir/embedded-font-audit.json"
 rm -rf "$build_dir/collected-notices"
 rm -f "$build_dir/notices-incomplete"
 if ! python3 "$repo_dir/tools/license-preflight/collect_notices.py" \
 	--repo "$repo_dir" --host "$macos_dir/lazer-rules-host" \
 	--go-binary "$macos_dir/danser" --native-notices "$deps_dir/licenses" \
 	--go-root "$(go env GOROOT)" \
+	--nuget-root "$lazer_resources_dir/packages" \
+	--resource-font-audit "$build_dir/embedded-font-audit.json" \
 	--out "$build_dir/collected-notices"; then
 	echo "Dependency notice collection failed; runtime diagnostics can continue, but archiving/release is blocked" >&2
 	touch "$build_dir/notices-incomplete"
