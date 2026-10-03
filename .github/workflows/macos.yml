@@ -68,6 +68,7 @@ jobs:
         run: python3 tools/macos-bundle-smoke.py
       - name: Archive verified bundle
         run: |
+          test ! -f dist/build-macos/notices-incomplete
           ditto -c -k --keepParent dist/build-macos/danser.app dist/build-macos/danser-macos.zip
           cd dist/build-macos
           shasum -a 256 danser-macos.zip > SHA256SUMS

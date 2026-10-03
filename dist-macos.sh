@@ -85,10 +85,14 @@ cp "$repo_dir/LICENSE" "$repo_dir/CREDITS.md" "$resources_dir/"
 cp "$repo_dir/third_party/osu/LICENCE" "$resources_dir/osu-LICENCE"
 cp -R "$deps_dir/licenses" "$resources_dir/ThirdPartyNotices"
 rm -rf "$build_dir/collected-notices"
-python3 "$repo_dir/tools/license-preflight/collect_notices.py" \
+rm -f "$build_dir/notices-incomplete"
+if ! python3 "$repo_dir/tools/license-preflight/collect_notices.py" \
 	--repo "$repo_dir" --host "$macos_dir/lazer-rules-host" \
 	--go-binary "$macos_dir/danser" --native-notices "$deps_dir/licenses" \
-	--out "$build_dir/collected-notices"
+	--out "$build_dir/collected-notices"; then
+	echo "Dependency notice collection failed; runtime diagnostics can continue, but archiving/release is blocked" >&2
+	touch "$build_dir/notices-incomplete"
+fi
 cp -R "$build_dir/collected-notices" "$resources_dir/CollectedThirdPartyNotices"
 
 iconset_dir="$build_dir/danser.iconset"

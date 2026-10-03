@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 import zipfile
 from pathlib import Path
 
@@ -13,6 +15,25 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
 class Tests(unittest.TestCase):
+    def test_go_queries_only_linked_replacement_module(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            build = root / "build.txt"
+            build.write_text("\tdep original/module v1.0.0 h1:test\n\t=> actual/module v2.0.0 h1:test\n")
+            module = root / "module"; module.mkdir()
+            (module / "LICENSE").write_text("Test-only module licence")
+            goroot = root / "goroot"; goroot.mkdir()
+            (goroot / "LICENSE").write_text("Test-only runtime licence")
+            a = SimpleNamespace(go_build_info=build, go_module_list=None, go_root=goroot, repo=root)
+            c = m.Collector(root / "out")
+            with patch.object(m.subprocess, "check_output", return_value=json.dumps(
+                    {"Path": "actual/module", "Version": "v2.0.0", "Dir": str(module)})) as command:
+                m.read_go(a, c)
+            self.assertEqual(command.call_args.args[0],
+                             ["go", "list", "-mod=readonly", "-m", "-json", "actual/module@v2.0.0"])
+            self.assertFalse(c.errors)
+            self.assertEqual(c.records[0]["key"], "actual/module@v2.0.0")
+
     def test_module_replacement(self):
         self.assertEqual(m.go_dependencies("\tdep old/module v1.0.0 h1:x\n\t=> new/module v2.0.0 h1:y\n"),
                          [{"path": "old/module", "version": "v1.0.0",
