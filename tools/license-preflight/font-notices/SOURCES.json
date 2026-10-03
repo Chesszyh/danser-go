@@ -1,0 +1,32 @@
+[
+  {
+    "assetPath": "assets/fonts/Quicksand-Bold.ttf",
+    "assetSha256": "3905f71bf8291badc368c795607d905c4f023b48142aa7d5446ec9f4d12e0297",
+    "copyright": "Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name \"Quicksand\"",
+    "version": "Version 3.004",
+    "notice": "Quicksand-OFL.txt",
+    "noticeSha256": "0066328a5aa1a05b497c77d5595052bafc56b177fc9caad530641768b9583c40",
+    "source": "https://github.com/google/fonts/blob/main/ofl/quicksand/OFL.txt",
+    "sourceGitBlobSha1": "5186b46abb63b664cbc6685b203e5f4c0c2a2ad8"
+  },
+  {
+    "assetPath": "assets/fonts/Ubuntu-Regular.ttf",
+    "assetSha256": "bac6461feb3488e5d330e7e9434fc8e0c513aa3c1e7b57598eab1654e1055a14",
+    "copyright": "Copyright 2011 Canonical Ltd.  Licensed under the Ubuntu Font Licence 1.0",
+    "version": "0.83",
+    "notice": "Ubuntu-UFL.txt",
+    "noticeSha256": "d0fad367950c5065f49112a192b87d80bfb635a45720df1aeb2740ab09921e37",
+    "source": "https://github.com/google/fonts/blob/main/ufl/ubuntu/UFL.txt",
+    "sourceGitBlobSha1": "ae78a8f94eae372cb1ca4e14b67244342fce604e"
+  },
+  {
+    "assetPath": "assets/fonts/Font Awesome 6 Free-Solid-900.otf",
+    "assetSha256": "9e832d9fb2f1a236d152d0bb98e28aeb80bfe95b377e89b07f1393c82ed30702",
+    "copyright": "Copyright (c) Font Awesome",
+    "version": "Version 769.01171875 (Font Awesome version: 6.1.1)",
+    "notice": "FontAwesome-6.1.1-LICENSE.txt",
+    "noticeSha256": "7f4aa154901475c45274a58052ee8ae3d7540446964407dcc742f07e609cca45",
+    "source": "https://github.com/FortAwesome/Font-Awesome/blob/6.1.1/LICENSE.txt",
+    "sourceGitBlobSha1": "cc557ece45db3719d26f8f6e0182d89651b76062"
+  }
+]

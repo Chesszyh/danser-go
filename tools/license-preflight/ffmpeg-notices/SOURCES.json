@@ -1,0 +1,34 @@
+{
+  "nugetPackage": "ppy.osu.Framework.NativeLibs/2025.806.0-nativelibs",
+  "nugetPackageSha256": "da8aa8fac26f4e75776d308b3a545e3964c9a60d1e23e83ad90f9eda25c899e5",
+  "nugetPackageRepositoryCommit": "a7b203bee6289e15d29490ec1d578dbc07257290",
+  "ffmpegVersion": "4.3.3",
+  "sourceArchive": "ffmpeg-4.3.3.tar.xz",
+  "sourceUrl": "https://ffmpeg.org/releases/ffmpeg-4.3.3.tar.xz",
+  "sourceArchiveSha256": "9f0a68fbd74feb4e50dc220bddd59d84626774a53687fb737806ae00e5c6e9e6",
+  "historicalBuildScriptsCommit": "02d0a060afa5fbae5cca987fde5cee2ad9f8771b",
+  "upstreamRepository": "https://github.com/ppy/osu-framework",
+  "verifiedGitBlobsMatchNuget": true,
+  "binaries": [
+    {
+      "filename": "libavcodec.58.dylib",
+      "sha256": "b322b806f1c5f71d98ac56647d68fcd683cc38f67bf7b1e99d970438945f5396",
+      "gitBlobSha1": "4351c58b4f89409668bb296d9d9d77a26fc0076f"
+    },
+    {
+      "filename": "libavformat.58.dylib",
+      "sha256": "2d5de497bd5ec4140e491e281def0a74af0cc86f5ab9fd905dfaba28c92bee8b",
+      "gitBlobSha1": "2d57c9e62d39fad05b0b8ffb052dbd9fcfb04c7a"
+    },
+    {
+      "filename": "libavutil.56.dylib",
+      "sha256": "f00e4e6d0a421b33ef58b8f40f225a4f9c3faaf8983795ec68dd212ba67b248d",
+      "gitBlobSha1": "910340c0d00ebb38deae05319bdd92d083338dac"
+    },
+    {
+      "filename": "libswscale.5.dylib",
+      "sha256": "d0f94ee43f53b9f45e67f4ffd4a4284383535f2c42597dd1b102504912020a59",
+      "gitBlobSha1": "b256e25cc32262047da05993df7c601c4656995c"
+    }
+  ]
+}

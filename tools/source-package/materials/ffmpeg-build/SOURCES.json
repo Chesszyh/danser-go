@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "file": "build-macOS.sh",
+      "sha256": "d5351816fcb41151ef76cd9a9aebe2f657c267d3c704ead318730a828535da9a",
+      "sourceGitBlobSha1": "c6978bf0116aac10f83efcc6f6ba7882296d93c8",
+      "sourceUrl": "https://github.com/ppy/osu-framework/blob/02d0a060afa5fbae5cca987fde5cee2ad9f8771b/osu.Framework.NativeLibs/scripts/ffmpeg/build-macOS.sh",
+      "sourceCommit": "02d0a060afa5fbae5cca987fde5cee2ad9f8771b"
+    },
+    {
+      "file": "combine_dylibs.sh",
+      "sha256": "3267ca4a868318374a6be69a442f055dcd3782c7ea25691f4a5692f02ff7b2be",
+      "sourceGitBlobSha1": "9eb2ae0372dbe7959909b50c776f6f4c6d9a86e8",
+      "sourceUrl": "https://github.com/ppy/osu-framework/blob/02d0a060afa5fbae5cca987fde5cee2ad9f8771b/osu.Framework.NativeLibs/scripts/ffmpeg/combine_dylibs.sh",
+      "sourceCommit": "02d0a060afa5fbae5cca987fde5cee2ad9f8771b"
+    },
+    {
+      "file": "common.sh",
+      "sha256": "ca6b50d222cfd11661709bbd5a2082c67375cc6c22ab73968f31973e8f3c724f",
+      "sourceGitBlobSha1": "7753867dca70f5345685829bec26a368a6ea3108",
+      "sourceUrl": "https://github.com/ppy/osu-framework/blob/02d0a060afa5fbae5cca987fde5cee2ad9f8771b/osu.Framework.NativeLibs/scripts/ffmpeg/common.sh",
+      "sourceCommit": "02d0a060afa5fbae5cca987fde5cee2ad9f8771b"
+    }
+  ]
+}

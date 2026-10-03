@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "OpenTabletDriver.Configurations",
+      "version": "0.6.7",
+      "packageSha256": "aea79f4b6f2c83a6ccfdba8d68b5865d744ce26d448752efb921f0af138f5568",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/opentabletdriver.configurations/0.6.7/opentabletdriver.configurations.0.6.7.nupkg",
+      "assets": [
+        {
+          "path": "lib/net8.0/OpenTabletDriver.Configurations.dll",
+          "sha256": "cba4bccb73697e385196086eb08f4a0fb47c2cc6de35f1731fb98ea917a6863d",
+          "matchesRestoredPublishedBinary": true
+        }
+      ],
+      "repository": {
+        "type": "git",
+        "url": "https://www.github.com/OpenTabletDriver/OpenTabletDriver",
+        "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c"
+      }
+    },
+    {
+      "id": "OpenTabletDriver.Native",
+      "version": "0.6.7",
+      "packageSha256": "8a2c4bac02c1d575f33607dec94ea8a4b36d7b93994358e1fe1b9323242c459f",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/opentabletdriver.native/0.6.7/opentabletdriver.native.0.6.7.nupkg",
+      "assets": [
+        {
+          "path": "lib/net8.0/OpenTabletDriver.Native.dll",
+          "sha256": "df58d045944ab11d1143b061f05c2140602698e8fe37cfc466528d8b5a8431dd",
+          "matchesRestoredPublishedBinary": true
+        }
+      ],
+      "repository": {
+        "type": "git",
+        "url": "https://www.github.com/OpenTabletDriver/OpenTabletDriver",
+        "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c"
+      }
+    },
+    {
+      "id": "OpenTabletDriver.Plugin",
+      "version": "0.6.7",
+      "packageSha256": "d126f8eb612dbf76fe2ad5e8c6a3d6f1402bdff1eb598d250398118fd5eb7f5f",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/opentabletdriver.plugin/0.6.7/opentabletdriver.plugin.0.6.7.nupkg",
+      "assets": [
+        {
+          "path": "lib/net8.0/OpenTabletDriver.Plugin.dll",
+          "sha256": "e9140ac1b2ad10f8f439d9c3b9d1d007bbbfbb5046d1155dee9442ae9c8b2aa8",
+          "matchesRestoredPublishedBinary": true
+        }
+      ],
+      "repository": {
+        "type": "git",
+        "url": "https://www.github.com/OpenTabletDriver/OpenTabletDriver",
+        "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c"
+      }
+    },
+    {
+      "id": "OpenTabletDriver",
+      "version": "0.6.7",
+      "packageSha256": "5bd8bf68b68aaedaf9d29d7be64ecee893f082088085e52fd3b97112152744f1",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/opentabletdriver/0.6.7/opentabletdriver.0.6.7.nupkg",
+      "assets": [
+        {
+          "path": "lib/net8.0/OpenTabletDriver.dll",
+          "sha256": "801c2bea99b88addfbd4bba23c5a226a45a1df46db0f06055e91a8e6f9918588",
+          "matchesRestoredPublishedBinary": true
+        }
+      ],
+      "repository": {
+        "type": "git",
+        "url": "https://www.github.com/OpenTabletDriver/OpenTabletDriver",
+        "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c"
+      }
+    },
+    {
+      "id": "TagLibSharp",
+      "version": "2.3.0",
+      "packageSha256": "3c3f5b55988f69e0bc84dc760feb8351fef4d5c09a322d88462e683d334dfbfc",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/taglibsharp/2.3.0/taglibsharp.2.3.0.nupkg",
+      "assets": [
+        {
+          "path": "lib/net462/TagLibSharp.dll",
+          "sha256": "b1833a41ab1e933f7b006e5db15300b7223bfccc2c3b6689d49a9171dd27de1d",
+          "matchesRestoredPublishedBinary": false
+        },
+        {
+          "path": "lib/netstandard2.0/TagLibSharp.dll",
+          "sha256": "dad93b152d55cf6a58b2037bcf9dd34b45d87761fe5ed61a232b3d4641d2a5d3",
+          "matchesRestoredPublishedBinary": true
+        }
+      ],
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/mono/taglib-sharp"
+      },
+      "sourceCommitVerifiedByPdb": "b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "pdbVerificationEvidence": "Prior verification retained in summary; detailed report lost, not re-run during recovery."
+    }
+  ],
+  "archives": [
+    {
+      "file": "taglib-sharp-b5ae84f2e84087bf160bb0471420200dd2b5d809.tar.gz",
+      "sha256": "2e54eb7382991caeafd2ac414ca5ab6ca2a4d2b5fe9bba4d8abff3fc1b308195",
+      "sourceUrl": "https://codeload.github.com/mono/taglib-sharp/tar.gz/b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "commit": "b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "repository": "https://github.com/mono/taglib-sharp"
+    },
+    {
+      "file": "OpenTabletDriver-736003ed72c8bbb28033b039d5a0bb76c344145c.tar.gz",
+      "sha256": "095309b615888620fe90ca6239459864e6fe25cb84a2cf6bab9ce7a9292c6f41",
+      "sourceUrl": "https://codeload.github.com/OpenTabletDriver/OpenTabletDriver/tar.gz/736003ed72c8bbb28033b039d5a0bb76c344145c",
+      "commit": "736003ed72c8bbb28033b039d5a0bb76c344145c",
+      "repository": "https://github.com/OpenTabletDriver/OpenTabletDriver"
+    }
+  ],
+  "recovery": {
+    "archiveHashStatus": "Retained from original downloaded archive verification; archive downloads are handled separately by source packager.",
+    "nugetStatus": "All five official exact-version packages re-downloaded; every package has a DLL hash matching restored CI publication inventory."
+  }
+}

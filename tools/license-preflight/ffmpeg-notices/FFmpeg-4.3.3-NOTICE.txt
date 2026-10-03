@@ -1,0 +1,12 @@
+FFmpeg 4.3.3
+
+Copyright (c) the FFmpeg developers and the copyright holders identified in its source files.
+
+This application includes libavcodec, libavformat, libavutil and libswscale from FFmpeg 4.3.3, dynamically linked and licensed under the GNU Lesser General Public License version 2.1 or later. The licence is included as COPYING.LGPLv2.1.
+
+These macOS libraries were redistributed from ppy.osu.Framework.NativeLibs 2025.806.0-nativelibs. Their bytes match the dylibs in its recorded ppy/osu-framework source commit a7b203bee6289e15d29490ec1d578dbc07257290. Their embedded version is 4.3.3; the latest historical macOS FFmpeg binary update is 02d0a060afa5fbae5cca987fde5cee2ad9f8771b, whose scripts specify the FFmpeg 4.3.3 release source without source patches in the macOS build flow.
+
+Source release: https://ffmpeg.org/releases/ffmpeg-4.3.3.tar.xz
+Historical build scripts: https://github.com/ppy/osu-framework/tree/02d0a060afa5fbae5cca987fde5cee2ad9f8771b/osu.Framework.NativeLibs/scripts/ffmpeg
+
+The release distributor must also provide the corresponding source archive and build scripts alongside the downloadable application; this external source link is not a substitute for that release payload. Users may replace the separately distributed FFmpeg libraries with compatible modified versions.

@@ -23,12 +23,16 @@ internal static class Program
 
         try
         {
+            if (args.Length == 3 && args[0] == "audit-fonts")
+                return FontAudit.Run(args[1], args[2]);
+
             Logger.Enabled = false;
 
             if (args.FirstOrDefault() == "live")
                 return runLive(LiveRequest.Parse(args));
 
             ReplayRequest request = ReplayRequest.Parse(args);
+            Diagnostics.Log("Replay request parsed; creating analysis game");
 
             var game = new ReplayAnalysisGame(request, getOsuSourceRevision());
             TextWriter standardOutput = Console.Out;
@@ -37,7 +41,9 @@ internal static class Program
             {
                 Console.SetOut(TextWriter.Null);
                 using var host = new TestRunHeadlessGameHost("danser-lazer-rules", realtime: false);
+                Diagnostics.Log("Headless host created; starting run");
                 host.Run(game);
+                Diagnostics.Log("Headless host run returned");
             }
             finally
             {
@@ -60,7 +66,7 @@ internal static class Program
         }
         catch (Exception error)
         {
-            Console.Error.WriteLine($"lazer rejudgement failed: {error.Message}");
+            Console.Error.WriteLine($"lazer rejudgement failed: {error}");
             return 1;
         }
     }
