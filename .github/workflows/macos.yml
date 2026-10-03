@@ -29,19 +29,45 @@ jobs:
       - name: Install build and recording tools
         run: brew install cmake ninja ffmpeg
       - name: Check dependency cache failure handling
-        run: python3 tools/test_macos_deps.py
+        run: |
+          python3 tools/test_macos_deps.py
+          python3 tools/license-preflight/test_collect_notices.py
       - uses: actions/cache@v4
+        id: native-cache
         with:
           path: .deps/macos
           key: macos-arm64-deps-${{ hashFiles('tools/macos-deps.sh') }}
       - name: Prepare native dependencies
         run: ./tools/macos-deps.sh
+      - name: Cache verified native dependencies
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .deps/macos
+          key: macos-arm64-deps-${{ hashFiles('tools/macos-deps.sh') }}
+      - uses: actions/cache/restore@v4
+        id: go-build-cache
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: macos-arm64-go-release-${{ hashFiles('go.mod', 'go.sum') }}
       - name: Test including native OpenGL regressions
         run: ./tools/macos-test.sh
-      - name: Build and verify app bundle
+      - name: Cache successful Go compilation
+        if: steps.go-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: macos-arm64-go-release-${{ hashFiles('go.mod', 'go.sum') }}
+      - name: Build app and self-contained rules host
+        run: ./dist-macos.sh 0.0.0-macos-ci "0.0.${GITHUB_RUN_NUMBER}"
+      - name: Verify relocated app with real replay
+        run: python3 tools/macos-bundle-smoke.py
+      - name: Archive verified bundle
         run: |
-          ./dist-macos.sh 0.0.0-macos-ci "0.0.${GITHUB_RUN_NUMBER}"
-          python3 tools/macos-bundle-smoke.py
           ditto -c -k --keepParent dist/build-macos/danser.app dist/build-macos/danser-macos.zip
           cd dist/build-macos
           shasum -a 256 danser-macos.zip > SHA256SUMS
@@ -60,5 +86,13 @@ jobs:
         with:
           name: danser-macos-verification
           path: dist/build-macos/verification
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Preserve dependency notice inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: danser-macos-notices
+          path: dist/build-macos/collected-notices
           if-no-files-found: ignore
           retention-days: 7

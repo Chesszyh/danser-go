@@ -1,0 +1,16 @@
+FONT ATTRIBUTIONS
+
+assets/fonts/Quicksand-Bold.ttf
+Copyright 2019 The Quicksand Project Authors (https://github.com/andrew-paglinawan/QuicksandFamily.git), with Reserved Font Name "Quicksand"
+Version 3.004
+Licence: Quicksand-OFL.txt
+
+assets/fonts/Ubuntu-Regular.ttf
+Copyright 2011 Canonical Ltd.  Licensed under the Ubuntu Font Licence 1.0
+0.83
+Licence: Ubuntu-UFL.txt
+
+assets/fonts/Font Awesome 6 Free-Solid-900.otf
+Copyright (c) Font Awesome
+Version 769.01171875 (Font Awesome version: 6.1.1)
+Licence: FontAwesome-6.1.1-LICENSE.txt

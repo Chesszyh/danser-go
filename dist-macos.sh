@@ -21,7 +21,7 @@ version=${1:-dev-macos}
 bundle_version=${2:-0.0.0}
 deployment_target=15.0
 
-for tool in go git codesign iconutil sips; do
+for tool in go git codesign iconutil sips python3; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		echo "Required build tool is missing: $tool" >&2
 		exit 1
@@ -84,6 +84,12 @@ cp "$deps_dir/lib/libbassmix.dylib" "$frameworks_dir/"
 cp "$repo_dir/LICENSE" "$repo_dir/CREDITS.md" "$resources_dir/"
 cp "$repo_dir/third_party/osu/LICENCE" "$resources_dir/osu-LICENCE"
 cp -R "$deps_dir/licenses" "$resources_dir/ThirdPartyNotices"
+rm -rf "$build_dir/collected-notices"
+python3 "$repo_dir/tools/license-preflight/collect_notices.py" \
+	--repo "$repo_dir" --host "$macos_dir/lazer-rules-host" \
+	--go-binary "$macos_dir/danser" --native-notices "$deps_dir/licenses" \
+	--out "$build_dir/collected-notices"
+cp -R "$build_dir/collected-notices" "$resources_dir/CollectedThirdPartyNotices"
 
 iconset_dir="$build_dir/danser.iconset"
 rm -rf "$iconset_dir"

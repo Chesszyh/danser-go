@@ -62,9 +62,28 @@ def main():
         for key in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "DANSER_MACOS_DEPS_DIR"):
             env.pop(key, None)
         host = app / "Contents/MacOS/lazer-rules-host/danser-lazer-rules"
-        result = run(str(host), "rejudge", "--beatmap", str(fixture / "macos-smoke.osu"),
-                     "--replay", str(fixture / "macos-smoke.osr"), env=env, capture_output=True)
-        response = json.loads(result.stdout)
+        env["DANSER_LAZER_DIAGNOSTICS"] = "1"
+        response_file = evidence / "rules-host-rejudge.json"
+        with response_file.open("w") as output, (evidence / "rules-host.log").open("w") as log:
+            process = subprocess.Popen([str(host), "rejudge", "--beatmap", str(fixture / "macos-smoke.osu"),
+                                        "--replay", str(fixture / "macos-smoke.osr")],
+                                       env=env, stdout=output, stderr=log)
+            try:
+                process.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                try:
+                    subprocess.run(["sample", str(process.pid), "5", "-file", str(evidence / "rules-host-sample.txt")],
+                                   timeout=30, check=False)
+                except subprocess.SubprocessError as error:
+                    print(f"Process sampling failed: {error}", file=sys.stderr)
+                try:
+                    process.wait(timeout=180)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                    raise RuntimeError("Rules host timed out; see rules-host.log and rules-host-sample.txt")
+            assert process.returncode == 0, "Rules host failed; see rules-host.log"
+        response = json.loads(response_file.read_text())
         assert response["protocolVersion"] == 3
         assert response["engine"]["osuSourceRevision"] == expected_osu
         assert response["replay"]["frameCount"] == 4687
@@ -73,7 +92,6 @@ def main():
                                   for a, b in zip(judgements, judgements[1:]))
         for key in ("performance", "fullComboPerformance", "perfectPerformance"):
             assert math.isfinite(response["rejudged"][key]["total"])
-        (evidence / "rules-host-rejudge.json").write_text(result.stdout)
         patch = json.dumps({
             "General": {"OsuSongsDir": str(fixture.parent)},
             "Graphics": {"Fullscreen": False, "WindowWidth": 640, "WindowHeight": 360,

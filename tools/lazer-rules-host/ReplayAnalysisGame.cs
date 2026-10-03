@@ -19,10 +19,13 @@ namespace Danser.LazerRulesHost;
 
 internal sealed partial class ReplayAnalysisGame : OsuGameBase
 {
+    protected override int UnhandledExceptionsBeforeCrash => 0;
+
     private readonly ReplayRequest request;
     private readonly string osuSourceRevision;
     private readonly DummyAPIAccess dummyApi = new();
     private readonly List<JudgementEvent> judgements = [];
+    private readonly System.Diagnostics.Stopwatch diagnosticTimer = System.Diagnostics.Stopwatch.StartNew();
 
     private ReplayPlayer? player;
     private Score? recorded;
@@ -47,6 +50,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
     protected override void LoadComplete()
     {
         base.LoadComplete();
+        Diagnostics.Log("Analysis game loaded");
         Content.Add(dummyApi);
         Scheduler.Add(startReplay);
     }
@@ -55,11 +59,19 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
     {
         base.Update();
 
+        if (Diagnostics.Enabled && readyToSeek && player != null && diagnosticTimer.Elapsed.TotalSeconds >= 10)
+        {
+            diagnosticTimer.Restart();
+            Diagnostics.Log($"Replay state: seekIssued={seekIssued}, current={player.IsCurrentScreen()}, completed={player.GameplayState.HasCompleted}, failed={player.GameplayState.HealthProcessor.HasFailed}, judgements={judgements.Count}");
+        }
+
         if (!finished && readyToSeek && !seekIssued && player?.IsCurrentScreen() == true)
         {
             player.GameplayState.ScoreProcessor.NewJudgement += captureJudgement;
             seekIssued = true;
+            Diagnostics.Log($"Seeking replay to {seekTarget}");
             player.Seek(seekTarget);
+            Diagnostics.Log("Replay seek returned");
         }
 
         if (!finished && seekIssued && player?.GameplayState.HasCompleted == true)
@@ -68,6 +80,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
 
     private void startReplay()
     {
+        Diagnostics.Log("Loading beatmap and replay");
         try
         {
             var flat = new FlatWorkingBeatmap(request.BeatmapPath);
@@ -76,6 +89,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             string beatmapHash = Convert.ToHexString(MD5.HashData(File.ReadAllBytes(request.BeatmapPath))).ToLowerInvariant();
             using var replayStream = File.OpenRead(request.ReplayPath);
             recorded = new SuppliedBeatmapDecoder(workingBeatmap, beatmapHash).Parse(replayStream);
+            Diagnostics.Log($"Decoded {recorded.Replay.Frames.Count} replay frames");
             recordedSnapshot = ScoreSnapshot.From(recorded.ScoreInfo);
 
             if (request.ModsJson != null)
@@ -91,6 +105,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             player = new ReplayPlayer(recorded);
             player.OnLoadComplete += _ => onPlayerLoaded();
             screens.Push(player);
+            Diagnostics.Log("Replay player pushed to screen stack");
         }
         catch (Exception error)
         {
@@ -100,6 +115,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
 
     private void onPlayerLoaded()
     {
+        Diagnostics.Log("Replay player loaded");
         try
         {
             if (player == null || recorded == null)
@@ -114,6 +130,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             double lastObject = player.GameplayState.Beatmap.HitObjects.LastOrDefault()?.GetEndTime() ?? 0;
             seekTarget = Math.Max(lastReplayFrame, lastObject) + 5000;
             readyToSeek = true;
+            Diagnostics.Log($"Replay ready; target {seekTarget}");
         }
         catch (Exception error)
         {
@@ -139,6 +156,7 @@ internal sealed partial class ReplayAnalysisGame : OsuGameBase
             return;
 
         finished = true;
+        Diagnostics.Log("Replay completed; calculating response");
 
         try
         {

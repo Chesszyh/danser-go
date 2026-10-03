@@ -21,6 +21,8 @@ namespace Danser.LazerRulesHost;
 
 internal sealed partial class LiveAnalysisGame : OsuGameBase
 {
+    protected override int UnhandledExceptionsBeforeCrash => 0;
+
     private static readonly JsonSerializerOptions jsonOptions = new(JsonSerializerDefaults.Web);
     private const double bootstrap_frame_time = -10_000;
 
