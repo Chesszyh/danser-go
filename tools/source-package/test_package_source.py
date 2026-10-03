@@ -163,6 +163,41 @@ class StagingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "differs from pinned archive"):
             self.package()
 
+    def test_sdl_archive_with_implicit_parent_directories(self):
+        write(self.sdl / "VisualC-GDK/SDL/project.vcxproj", "pinned project source")
+        with tarfile.open(self.sdl_archive, "w:gz") as tar:
+            for file in sorted(self.sdl.rglob("*")):
+                if file.is_file() and file.name != ".archive-sha256":
+                    tar.add(file, arcname=str(Path(self.sdl.name) / file.relative_to(self.sdl)), recursive=False)
+        checksum = p.digest(self.sdl_archive)
+        with tarfile.open(self.sdl_archive) as tar:
+            self.assertFalse(any(member.isdir() for member in tar))
+        staged = self.root / "implicit-parents-staged"
+        p.package_sdl(self.sdl_archive, self.sdl, staged, checksum)
+        self.assertEqual((staged / "VisualC-GDK/SDL/project.vcxproj").read_text(), "pinned project source")
+
+        # Implicit parents do not authorize unrelated files or empty directories.
+        for name, is_directory in (("unexpected.c", False), ("unexpected-directory", True)):
+            with self.subTest(extra=name):
+                extra = self.sdl / name
+                extra.mkdir() if is_directory else extra.write_text("unexpected")
+                with self.assertRaisesRegex(ValueError, "Unexpected files"):
+                    p.package_sdl(self.sdl_archive, self.sdl, self.root / name, checksum)
+                extra.rmdir() if is_directory else extra.unlink()
+
+        with self.subTest(changed_nested_source=True):
+            write(self.sdl / "VisualC-GDK/SDL/project.vcxproj", "changed")
+            with self.assertRaisesRegex(ValueError, "differs from pinned archive"):
+                p.package_sdl(self.sdl_archive, self.sdl, self.root / "changed-nested", checksum)
+            write(self.sdl / "VisualC-GDK/SDL/project.vcxproj", "pinned project source")
+
+        with self.subTest(symlink_parent=True):
+            outside = self.root / "outside-source-parent"
+            (self.sdl / "VisualC-GDK").rename(outside)
+            os.symlink(outside, self.sdl / "VisualC-GDK")
+            with self.assertRaisesRegex(ValueError, "SDL source directory differs"):
+                p.package_sdl(self.sdl_archive, self.sdl, self.root / "symlink-parent", checksum)
+
     def test_pre_module_source(self):
         (self.cache / "example.org/!fork@v1.2.3/go.mod").unlink()
         write(self.cache / "cache/download/example.org/!fork/@v/v1.2.3.mod", "module example.org/Fork\n")

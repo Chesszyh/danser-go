@@ -177,6 +177,16 @@ def package_sdl(archive, source, destination, checksum):
             rel = Path(*path.parts[1:])
             target, original = destination / rel, source / rel
             included.add(rel.as_posix())
+            # Archives may omit directory members while retaining their files.
+            # Count only the actual ancestors implied by each pinned member,
+            # and still reject source parents replaced with symlinks.
+            for parent in rel.parents:
+                if parent == Path("."):
+                    continue
+                original_parent = source / parent
+                check(original_parent.is_dir() and not original_parent.is_symlink(),
+                      "SDL source directory differs: " + str(parent))
+                included.add(parent.as_posix())
             if member.isdir():
                 check(original.is_dir() and not original.is_symlink(), "SDL source directory differs: " + str(rel))
                 target.mkdir(parents=True, exist_ok=True)
