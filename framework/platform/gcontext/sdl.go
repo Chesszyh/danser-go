@@ -357,7 +357,7 @@ func loadIconsSDL(name string) {
 
 	err := sdlWindow.SetIcon(mainIcon)
 	if err != nil {
-		panic(err)
+		log.Println("Failed to load window icons:", err.Error())
 	}
 
 	for _, pxMap := range toDispose {
@@ -399,4 +399,8 @@ func AddToClipboard(text string) {
 	if err := sdl.SetClipboardText(text); err != nil {
 		panic(err)
 	}
+}
+
+func IsMainThread() bool {
+	return sdl.IsMainThread()
 }

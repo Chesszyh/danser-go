@@ -37,6 +37,7 @@ type Circle struct {
 	comboText        *sprite.TextSprite
 
 	sprites         []sprite.ISprite
+	hitFade         *animation.Glider
 	diff            *difficulty.Difficulty
 	lastTime        float64
 	silent          bool
@@ -110,6 +111,10 @@ func (circle *Circle) Update(time float64) bool {
 		circle.PlaySound()
 	}
 
+	if circle.hitFade != nil {
+		circle.hitFade.Update(time)
+	}
+
 	for _, s := range circle.sprites {
 		s.Update(time)
 	}
@@ -146,6 +151,7 @@ func (circle *Circle) SetTiming(timings *Timings, _ int, _ bool) {
 
 func (circle *Circle) SetDifficulty(diff *difficulty.Difficulty) {
 	circle.diff = diff
+	circle.hitFade = nil
 
 	startTime := circle.StartTime - diff.Preempt
 
@@ -181,14 +187,19 @@ func (circle *Circle) SetDifficulty(diff *difficulty.Difficulty) {
 
 	circles := []sprite.ISprite{circle.hitCircle, circle.hitCircleOverlay, circle.comboText}
 
+	fadeIn := diff.TimeFadeIn
+	if diff.CheckModActive(difficulty.Hidden) {
+		fadeIn = diff.Preempt * 0.4
+	}
+
 	for _, t := range circles {
-		if diff.CheckModActive(difficulty.Hidden) {
+		if diff.HiddenFadesObjects() {
 			if !circle.SliderPoint || circle.SliderPointStart || circle.firstEndCircle {
 				t.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, startTime+diff.Preempt*0.4, 0.0, 1.0))
 				t.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime+diff.Preempt*0.4, startTime+diff.Preempt*0.7, 1.0, 0.0))
 			}
 		} else if !diff.CheckModActive(difficulty.Traceable) || circle.HitObjectID == 0 {
-			t.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, startTime+diff.TimeFadeIn, 0.0, 1.0))
+			t.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, startTime+fadeIn, 0.0, 1.0))
 			if !circle.SliderPoint || circle.SliderPointStart {
 				t.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, endTime+float64(diff.Hit100), endTime+float64(diff.Hit50), 1.0, 0.0))
 			} else {
@@ -263,12 +274,21 @@ func (circle *Circle) Arm(clicked bool, time float64) {
 		circle.approachCircle.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, startTime, 0.0, 0.0))
 	}
 
+	disableHitAnimations := !settings.Objects.HitAnimations && (!circle.SliderPoint || circle.SliderPointStart || circle.SliderPointEnd)
+	circle.hitFade = nil
+
+	if clicked && disableHitAnimations {
+		// Lazer applies a short parent fade while retaining the skin's hit transforms.
+		circle.hitFade = animation.NewGlider(1)
+		circle.hitFade.AddEventSEase(startTime, startTime+60, 1, 0, easing.OutQuad)
+	}
+
 	endScale := 1.4
 	if skin.GetInfo().Version < 2 {
 		endScale = 1.8
 	}
 
-	if clicked && !circle.diff.CheckModActive(difficulty.Hidden) && !circle.diff.CheckModActive(difficulty.Traceable) {
+	if clicked && !circle.diff.HiddenFadesObjects() && !circle.diff.CheckModActive(difficulty.Traceable) {
 		endTime := startTime + difficulty.HitFadeOut
 		circle.hitCircle.AddTransform(animation.NewSingleTransform(animation.Scale, easing.OutQuad, startTime, endTime, 1.0, endScale))
 		circle.hitCircleOverlay.AddTransform(animation.NewSingleTransform(animation.Scale, easing.OutQuad, startTime, endTime, 1.0, endScale))
@@ -290,7 +310,7 @@ func (circle *Circle) Arm(clicked bool, time float64) {
 
 		if skin.GetInfo().Version < 2 {
 			circle.comboText.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, endTime, 1.0, 0.0))
-		} else {
+		} else if !disableHitAnimations {
 			circle.comboText.AddTransform(animation.NewSingleTransform(animation.Fade, easing.Linear, startTime, startTime+60, 1.0, 0.0))
 		}
 	} else {
@@ -320,6 +340,10 @@ func (circle *Circle) Draw(time float64, color color2.Color, batch *batch.QuadBa
 	batch.SetTranslation(position.Copy64())
 
 	alpha := float64(color.A)
+
+	if circle.hitFade != nil {
+		alpha *= circle.hitFade.GetValue()
+	}
 
 	if settings.DIVIDES >= settings.Objects.Colors.MandalaTexturesTrigger {
 		alpha *= settings.Objects.Colors.MandalaTexturesAlpha
@@ -367,7 +391,7 @@ func (circle *Circle) Draw(time float64, color color2.Color, batch *batch.QuadBa
 	batch.SetSubScale(1, 1)
 	batch.SetTranslation(vector.NewVec2d(0, 0))
 
-	if time >= circle.StartTime && circle.hitCircle.GetAlpha() <= 0.001 {
+	if time >= circle.StartTime && (circle.hitCircle.GetAlpha() <= 0.001 || (circle.hitFade != nil && circle.hitFade.GetValue() <= 0.001)) {
 		return true
 	}
 

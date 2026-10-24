@@ -7,6 +7,7 @@
 /ffmpeg/
 /dist/
 /cache/
+/tools/ppcheck/
 settings.json
 settings-*
 *.db

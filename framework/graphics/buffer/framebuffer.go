@@ -1,13 +1,15 @@
 package buffer
 
 import (
+	"runtime"
+
 	"github.com/wieku/danser-go/framework/goroutines"
 	"github.com/wieku/danser-go/framework/graphics/history"
 	color2 "github.com/wieku/danser-go/framework/math/color"
 	"github.com/wieku/danser-go/framework/profiler"
-	"runtime"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
+
 	"github.com/wieku/danser-go/framework/graphics/texture"
 )
 
@@ -295,8 +297,12 @@ func (f *Framebuffer) ClearColorIM(index int, color color2.Color) {
 	clearFramebuffer(f.handle, gl.COLOR, int32(index), &glColor[0])
 }
 
+var dCache [4]float32
+
 func (f *Framebuffer) ClearDepthV(v float32) {
-	clearFramebuffer(f.handle, gl.DEPTH, 0, &v)
+	// Vega drivers may read 16 bytes even though a depth clear uses one float.
+	dCache[0] = v
+	clearFramebuffer(f.handle, gl.DEPTH, 0, &dCache[0])
 }
 
 func (f *Framebuffer) ClearDepth() {

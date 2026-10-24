@@ -518,7 +518,21 @@ func (set *OsuRuleSet) SendResult(cursor *graphics.Cursor, judgementResult Judge
 		return
 	}
 
-	if (subSet.player.diff.Mods.Active(difficulty.SuddenDeath|difficulty.Perfect) && judgementResult.ComboResult == Reset) ||
+	if subSet.player.diff.CheckModActive(difficulty.Lazer) {
+		if subSet.player.diff.CheckModActive(difficulty.Perfect) {
+			relevantResult := (judgementResult.HitResult|judgementResult.MaxResult)&(BaseHitsM|SliderHits|SliderMiss) > 0
+			if relevantResult && judgementResult.HitResult != judgementResult.MaxResult {
+				subSet.sdpfFail = true
+			}
+		} else if subSet.player.diff.CheckModActive(difficulty.SuddenDeath) {
+			conf, _ := difficulty.GetModConfig[difficulty.SuddenDeathSettings](subSet.player.diff)
+			missedTail := judgementResult.MaxResult&(SliderEnd|LegacySliderEnd) > 0 && judgementResult.HitResult == SliderMiss
+
+			if judgementResult.ComboResult == Reset || (conf.FailOnSliderTail && missedTail) {
+				subSet.sdpfFail = true
+			}
+		}
+	} else if (subSet.player.diff.Mods.Active(difficulty.SuddenDeath|difficulty.Perfect) && judgementResult.ComboResult == Reset) ||
 		(subSet.player.diff.Mods.Active(difficulty.Perfect) && (judgementResult.HitResult&BaseHitsM > 0 && judgementResult.HitResult&BaseHitsM != Hit300)) {
 		if judgementResult.HitResult&BaseHitsM > 0 {
 			judgementResult.HitResult = Miss
@@ -554,10 +568,14 @@ func (set *OsuRuleSet) SendResult(cursor *graphics.Cursor, judgementResult Judge
 
 	set.processGekiKatu(subSet, &judgementResult)
 
-	if subSet.sdpfFail {
+	if subSet.sdpfFail && !subSet.player.diff.CheckModActive(difficulty.Lazer) {
 		subSet.hp.Increase(-100000, true)
 	} else {
 		subSet.hp.AddResult(judgementResult)
+
+		if subSet.sdpfFail {
+			set.failInternal(subSet.player)
+		}
 	}
 
 	if set.hitListener != nil {
@@ -768,7 +786,8 @@ func (set *OsuRuleSet) failInternal(player *difficultyPlayer) {
 		return
 	}
 
-	if !subSet.replayEnded && player.diff.CheckModActive(difficulty.NoFail|difficulty.Relax|difficulty.Relax2) {
+	if !subSet.replayEnded && (player.diff.CheckModActive(difficulty.NoFail) ||
+		(!player.diff.CheckModActive(difficulty.Lazer) && player.diff.CheckModActive(difficulty.Relax|difficulty.Relax2))) {
 		return
 	}
 
