@@ -17,7 +17,7 @@ fi
 [[ $(git -C "$work/upstream" rev-parse HEAD) == "$revision" ]]
 rm -rf "$work/source" "$work/build" "$work/feed" "$work/packages/ppy.osu.game.resources/2026.1021.0"
 mkdir -p "$work/source" "$work/feed"
-git -C "$work/upstream" archive "$revision" | tar -xf - -C "$work/source"
+git -c core.autocrlf=false -C "$work/upstream" archive "$revision" | tar -xf - -C "$work/source"
 python3 "$repo_dir/tools/lazer-fonts/replace_restricted_fonts.py" apply "$work/source"
 python3 "$repo_dir/tools/lazer-fonts/replace_restricted_fonts.py" audit "$work/source" > "$work/source-audit.json"
 
