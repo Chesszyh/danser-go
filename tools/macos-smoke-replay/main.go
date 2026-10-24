@@ -56,6 +56,7 @@ func buildReplay(beatmap []byte) *rplpa.Replay {
 	return &rplpa.Replay{
 		PlayMode:     0,
 		OsuVersion:   20240101,
+		Mods:         1, // No Fail keeps the deliberately inaccurate replay running for render checks.
 		BeatmapMD5:   fmt.Sprintf("%x", md5.Sum(beatmap)),
 		Username:     "macOS Port Smoke Replay",
 		ReplayMD5:    "danser-go-macos-port-smoke",

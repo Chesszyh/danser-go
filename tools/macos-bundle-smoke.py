@@ -188,7 +188,7 @@ def main():
                           "libx264": {"Preset": "ultrafast"}},
         })
         common = [str(binary), "-noupdatecheck", "-replay=" + str(fixture / "macos-smoke.osr"),
-                  "-sPatch=" + patch, "-quickstart", "-mods=NF"]
+                  "-sPatch=" + patch, "-quickstart"]
         with (evidence / "screenshot.log").open("w") as log:
             run(*common, "-ss=20", "-out=ci-smoke", env=env, stdout=log, stderr=subprocess.STDOUT)
         screenshot = Path(env["HOME"]) / "Library/Application Support/danser/screenshots/ci-smoke.png"

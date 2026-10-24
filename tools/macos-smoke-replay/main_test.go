@@ -18,6 +18,9 @@ func TestBuildReplayRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if parsed.Mods != 1 {
+		t.Fatalf("smoke replay must keep No Fail enabled, got mods %d", parsed.Mods)
+	}
 	if parsed.BeatmapMD5 != "ccf7f455c66cdd475a7ace59ac50b988" {
 		t.Fatalf("unexpected beatmap hash: %s", parsed.BeatmapMD5)
 	}
