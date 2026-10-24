@@ -32,6 +32,7 @@ gcc -no-pie --verbose -O3 -D LAUNCHER -o $BUILD_DIR/danser -I. cmain/main_danser
 rm $BUILD_DIR/danser-core.h
 
 go run tools/ffmpeg/ffmpeg.go $BUILD_DIR/
+"$BUILD_DIR/ffmpeg/bin/ffmpeg" -version
 
 tools/lazer-rules-host/publish.sh linux-x64 "$BUILD_DIR/lazer-rules-host"
 "$BUILD_DIR/lazer-rules-host/danser-lazer-rules" audit-fonts \

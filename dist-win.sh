@@ -89,6 +89,7 @@ $CC <<< --verbose -O3 -D LAUNCHER -o $BUILD_DIR/danser.exe -I. cmain/main_danser
 rm $BUILD_DIR/{danser.syso,danser-core.h}
 
 go run tools/ffmpeg/ffmpeg.go $BUILD_DIR/
+"$BUILD_DIR/ffmpeg/ffmpeg.exe" -version
 
 tools/lazer-rules-host/publish.sh win-x64 "$BUILD_DIR/lazer-rules-host"
 "$BUILD_DIR/lazer-rules-host/danser-lazer-rules.exe" audit-fonts \

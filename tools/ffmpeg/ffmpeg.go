@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -48,9 +49,9 @@ func main() {
 
 		if strings.HasPrefix(strName, "bin/") && !strings.HasSuffix(strName, "bin/") {
 			if runtime.GOOS == "linux" {
-				unpack(f, filepath.Join(targetDir, "ffmpeg", "bin", strings.TrimPrefix(strName, "bin/")))
+				unpack(f, filepath.Join(targetDir, "ffmpeg", "bin", strings.TrimPrefix(strName, "bin/")), zipFile)
 			} else {
-				unpack(f, filepath.Join(targetDir, "ffmpeg", strings.TrimPrefix(strName, "bin/")))
+				unpack(f, filepath.Join(targetDir, "ffmpeg", strings.TrimPrefix(strName, "bin/")), zipFile)
 			}
 		}
 
@@ -59,7 +60,7 @@ func main() {
 				matches := len(strings.Split(strName, ".")) == 3 // matching lib***.so.version
 
 				if matches {
-					unpack(f, filepath.Join(targetDir, "ffmpeg", "lib", strings.TrimPrefix(strName, "lib/")))
+					unpack(f, filepath.Join(targetDir, "ffmpeg", "lib", strings.TrimPrefix(strName, "lib/")), zipFile)
 				}
 			}
 		}
@@ -72,7 +73,7 @@ func main() {
 	log.Println("Finished.")
 }
 
-func unpack(f *zip.File, s string) {
+func unpack(f *zip.File, s string, archive *zip.Reader) {
 	log.Println(fmt.Sprintf("Unpacking \"%s\" to \"%s\"...", f.Name, s))
 	out, err := os.OpenFile(s, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0755)
 	if err != nil {
@@ -86,6 +87,18 @@ func unpack(f *zip.File, s string) {
 		panic(err)
 	}
 
+	if f.Mode()&os.ModeSymlink != 0 {
+		// Linux FFmpeg archives store major-version library names as links to full versions.
+		target, readErr := io.ReadAll(zEntry)
+		zEntry.Close()
+		if readErr != nil {
+			panic(readErr)
+		}
+		zEntry, err = archive.Open(path.Join(path.Dir(f.Name), string(target)))
+		if err != nil {
+			panic(err)
+		}
+	}
 	defer zEntry.Close()
 
 	_, err = io.Copy(out, zEntry)

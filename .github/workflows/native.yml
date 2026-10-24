@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
@@ -55,7 +59,9 @@ jobs:
         with:
           global-json-file: third_party/osu/global.json
       - name: Test Go packages
-        run: go test -p 2 -tags 'exclude_cimgui_glfw exclude_cimgui_sdli' ./...
+        run: |
+          go test -p 2 -tags 'exclude_cimgui_glfw exclude_cimgui_sdli' ./...
+          go test -C tools/ffmpeg ./...
       - name: Test distribution tooling
         if: runner.os == 'Linux'
         run: |
