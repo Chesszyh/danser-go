@@ -50,33 +50,7 @@ mkdir -p "$macos_dir" "$frameworks_dir" "$resources_dir"
 
 lazer_resources_dir="$repo_dir/.deps/lazer-resources"
 export DANSER_LAZER_RESOURCES_DIR="$lazer_resources_dir"
-bash "$repo_dir/tools/lazer-fonts/build-resources.sh"
-
-(
-	cd "$repo_dir/third_party/osu"
-	DOTNET_CLI_TELEMETRY_OPTOUT=1 "$dotnet_cmd" publish \
-		"$repo_dir/tools/lazer-rules-host/Danser.LazerRulesHost.csproj" \
-		--configuration Release \
-		--runtime osx-arm64 \
-		--self-contained true \
-		--output "$macos_dir/lazer-rules-host" \
-		-p:RestorePackagesPath="$lazer_resources_dir/packages" \
-		-p:RestoreConfigFile="$lazer_resources_dir/NuGet.Config" \
-		-m:2
-)
-
-if [ ! -x "$macos_dir/lazer-rules-host/danser-lazer-rules" ]; then
-	echo "Official osu!lazer rules host was not published" >&2
-	exit 1
-fi
-
-python3 - "$lazer_resources_dir" "$macos_dir/lazer-rules-host" <<'PY'
-import hashlib,json,sys
-from pathlib import Path
-work,host=map(Path,sys.argv[1:]);expected=json.loads((work/'rebuilt-package.json').read_text())
-actual=hashlib.sha256((host/'osu.Game.Resources.dll').read_bytes()).hexdigest()
-assert actual==expected['assemblySha256'], 'Publish did not use the rebuilt Inter resource assembly'
-PY
+"$repo_dir/tools/lazer-rules-host/publish.sh" osx-arm64 "$macos_dir/lazer-rules-host"
 
 MACOSX_DEPLOYMENT_TARGET="$deployment_target" \
 	CGO_CFLAGS="-O2 -g -mmacosx-version-min=$deployment_target" \

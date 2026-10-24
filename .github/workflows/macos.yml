@@ -5,6 +5,14 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: dev-macos
+      bundle-version:
+        type: string
+        default: '0.0.0'
 
 permissions:
   contents: read
@@ -23,7 +31,7 @@ jobs:
           submodules: recursive
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26.1'
+          go-version-file: go.mod
           cache: false
       - uses: actions/setup-dotnet@v4
         with:
@@ -65,7 +73,10 @@ jobs:
           path: ~/Library/Caches/go-build
           key: macos-arm64-go-build-v2-${{ hashFiles('go.mod', 'go.sum') }}
       - name: Build app and self-contained rules host
-        run: ./dist-macos.sh 0.0.0-macos-preview "0.0.${GITHUB_RUN_NUMBER}"
+        run: ./dist-macos.sh "$DANSER_VERSION" "$BUNDLE_VERSION"
+        env:
+          DANSER_VERSION: ${{ inputs.version || 'dev-macos' }}
+          BUNDLE_VERSION: ${{ inputs.bundle-version || format('0.0.{0}', github.run_number) }}
       - name: Verify relocated app with real replay
         run: python3 tools/macos-bundle-smoke.py
       - name: Archive verified bundle
@@ -105,25 +116,3 @@ jobs:
           path: dist/build-macos/collected-notices
           if-no-files-found: ignore
           retention-days: 7
-
-  publish-preview:
-    needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'Release macOS Inter preview')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
-      actions: read
-    concurrency:
-      group: danser-macos-2026.10.03
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: danser-macos
-          path: release-assets
-      - name: Publish only the verified master build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/publish-macos-release.py release-assets

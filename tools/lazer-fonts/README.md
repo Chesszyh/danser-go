@@ -10,12 +10,12 @@ It does not change the host, the resource project, assembly metadata or public A
 Keep these together:
 
 - `replace_restricted_fonts.py`: Python 3.10+ standard-library CLI
-- `pinned-resource-lock.json.gz`: authenticated source lock for all 7,743 resource
+- `pinned-resource-lock.json.gz`: authenticated source lock for all resource
   project files plus upstream root README and licence, from osu-resources commit
-  `742ca60d4e7273dce0cac2fced7cd132f26f11c8`
+  `46d344264e5938e168cfbbd2c8fab5f572ebeda4`
 
 The generator authenticates its lock with hardcoded SHA-256
-`1ca193dfe0510c2c88ee3d6732b0c187447dc6233262df9b97fd85fb8c08423f`.
+`042229e5527079d131e8ce4ce535906ea73f1ec7577d7c8f8398c5a1d30c58e7`.
 It then verifies each source file's byte length and Git blob SHA-1. It accepts a
 clean source archive as well as a Git checkout; `.git` is not needed or read.
 Unlisted files in the resource project fail verification. Run source audit before
@@ -101,16 +101,9 @@ All fonts retain nominal size/lineHeight 100, but baselines differ (Torus 84,
 Venera 75, Inter 80), as do glyph widths. Venera Black/Bold and Torus/Alternate
 stylistic distinctions are intentionally reduced. This is not pixel-identical UI.
 
-## Verified in this kit
+## Verification
 
-- 18 synthetic offline unit tests, including format errors, coverage, page count,
-  exact blank-space cloning, path validation, source/API changes, symlinks,
-  rollback, missing pages and detection of renamed restricted originals
-- Read-only real source preflight: all 7,745 pinned files and all 11 glyph sets
-- Real apply/audit on a disposable private copy: 7,773 final resource files,
-  11 aliases, 39 PNG pages, zero original restricted payloads
-- Repeat derivation produced identical bytes; repeated audit passed
-- Original restored checkout was reverified pristine afterward
-- No assembly build or runtime test was performed by this kit
-
-The native workflow records the current build audit and smoke-test results.
+Run the offline tests with `python3 tools/lazer-fonts/test_replace_restricted_fonts.py`.
+`preflight`, `apply`, and `audit` report the source inventory and glyph coverage.
+Distribution builds verify the embedded resource assembly with the rules host's
+`audit-fonts` command, then exercise replay and live input through that assembly.

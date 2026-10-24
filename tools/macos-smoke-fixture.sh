@@ -24,4 +24,14 @@ cp "$repo_dir/tools/testdata/macos-smoke.osu" "$set_dir/macos-smoke.osu"
 go run "$repo_dir/tools/macos-smoke-replay" \
   "$set_dir/macos-smoke.osu" "$set_dir/macos-smoke.osr"
 
+python3 - "$set_dir" <<'PYREPLAY'
+from pathlib import Path
+import struct, sys
+root = Path(sys.argv[1])
+replay = bytearray((root / 'macos-smoke.osr').read_bytes())
+# The first lazer replay format uses the legacy container without appended score JSON.
+struct.pack_into('<i', replay, 1, 30000000)
+(root / 'macos-smoke-lazer.osr').write_bytes(replay)
+PYREPLAY
+
 printf '%s\n' "$set_dir"

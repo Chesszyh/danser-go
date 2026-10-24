@@ -1,174 +1,64 @@
-name: Build danser
+name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Danser version'
-        type: string
-        required: true
-      draft:
-        description: 'Create draft release'
-        type: boolean
-        required: false
-        default: true
-      sign:
-        description: 'Sign files (Windows only)'
-        type: boolean
-        required: false
-        default: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build_windows:
-    name: Building windows version
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout master branch
-        uses: actions/checkout@v3
-
-      - name: Install winlibs
-        uses: bwoodsend/setup-winlibs-action@v1
-
-      - name: Install golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.27.2'
-          cache: true
-
-      - name: Build danser
-        run: |
-          version="${{ inputs.version }}"
-
-          export DANSER_BUILD_MODE=0
-
-          if [[ ${{ inputs.sign }} == 'true' || ${{ inputs.sign }} == true ]]
-          then
-          export DANSER_BUILD_MODE=1
-          
-          ./dist-win.sh $version
-
-          if [ ! -f "dist/build-win/danser-core.dll" ]; then
-            echo "Danser failed to build"
-            exit 1
-          fi
-          
-          else
-          
-          ./dist-win.sh $version
-          
-          if [ ! -f "dist/artifacts/danser-${version// /-s}-win.zip" ]; then
-            echo "Danser failed to build"
-            exit 1
-          fi
-          
-          fi
-
-        id: build
-
-      - name: Sign files with Trusted Signing
-        if: ${{ inputs.sign == true || inputs.sign == 'true' }}
-        uses: azure/trusted-signing-action@v0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: https://weu.codesigning.azure.net/
-          trusted-signing-account-name: mailatwiekume
-          certificate-profile-name: danser
-          files-folder: ${{ github.workspace }}/dist/build-win
-          files-folder-filter: exe,dll
-          files-folder-recurse: true
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-
-      - name: Pack danser
-        if: ${{ inputs.sign == true || inputs.sign == 'true' }}
-        run: |
-          version="${{ inputs.version }}"
-
-          export DANSER_BUILD_MODE=2
-
-          ./dist-win.sh $version
-
-          if [ ! -f "dist/artifacts/danser-${version// /-s}-win.zip" ]; then
-            echo "Danser failed to build"
-            exit 1
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: ${{ !failure() && steps.build.conclusion != 'failure' }}
-        with:
-          name: danser-win
-          path: dist/artifacts/*
-
-  build_linux:
-    name: Building linux version
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v3
-
-      - name: Install needed packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install xorg-dev libgl1-mesa-dev libgtk-3-dev
-
-      - name: Install golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.27.2'
-          cache: true
-
-      - name: Build danser
-        run: |
-          version="${{ inputs.version }}"
-          
-          chmod +x dist-linux.sh
-          ./dist-linux.sh $version
-          
-          if [ ! -f "dist/artifacts/danser-${version// /-s}-linux.zip" ]; then
-            echo "Danser failed to build"
-            exit 1
-          fi
-        id: build
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        if: ${{ !failure() && steps.build.conclusion != 'failure' }}
-        with:
-          name: danser-linux
-          path: dist/artifacts/*
-
-  publish_release:
-    name: Publish draft release
-    if: ${{ !cancelled() && needs.build_windows.result == 'success' && needs.build_linux.result == 'success' && (inputs.draft == true || inputs.draft == 'true') }}
-    needs: [build_windows, build_linux]
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      bundle-version: ${{ steps.version.outputs.bundle-version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "bundle-version=${version%%-*}" >> "$GITHUB_OUTPUT"
+
+  native:
+    needs: version
+    uses: ./.github/workflows/native.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  macos:
+    needs: version
+    uses: ./.github/workflows/macos.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      bundle-version: ${{ needs.version.outputs.bundle-version }}
+
+  publish:
+    needs: [native, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           pattern: danser-*
           path: artifacts
-          merge-multiple: true
-      - name: Create release
-        id: create_release
-        run: |
-          set -xe
-          shopt -s nullglob
-
-          version="${{ inputs.version }}"
-
-          NAME="${version// / snapshot }"
-          TAGNAME="${version// /-s}"
-
-          gh release create "$TAGNAME" --draft -t "$NAME" --target "master" $(for a in artifacts/*.{zip,tar.xz}; do echo $a; done)
+      - name: Publish verified distributions
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir release-assets
+          cp artifacts/danser-linux/*.zip artifacts/danser-win/*.zip release-assets/
+          cp artifacts/danser-macos/* release-assets/
+          flags=()
+          if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$TAG" release-assets/* --verify-tag \
+            --title "danser $TAG" --notes-file docs/releases/"$TAG".md "${flags[@]}"

@@ -6,8 +6,8 @@
 
 [简体中文](README.zh-CN.md)
 
-[![GitHub release](https://img.shields.io/github/release/wieku/danser-go.svg)](https://github.com/Wieku/danser-go/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/wieku/danser-go/total?label=Downloads)](https://github.com/Wieku/danser-go/releases)
+[![GitHub release](https://img.shields.io/github/release/Chesszyh/danser-go.svg)](https://github.com/Chesszyh/danser-go/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Chesszyh/danser-go/total?label=Downloads)](https://github.com/Chesszyh/danser-go/releases)
 [![CodeFactor](https://www.codefactor.io/repository/github/wieku/danser-go/badge)](https://www.codefactor.io/repository/github/wieku/danser-go)
 [![Discord server](https://img.shields.io/discord/713705871758065685.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/UTPvbe8)
 
@@ -28,7 +28,7 @@ This fork supports Apple Silicon Macs running macOS 15 or newer through an OpenG
 
 ## Running Danser
 
-You can download the newest Windows/Linux 64-bit binaries from [releases](https://github.com/Wieku/danser-go/releases).
+You can download the newest Windows/Linux 64-bit binaries from [releases](https://github.com/Chesszyh/danser-go/releases).
 
 After unpacking it to your desired directory, you need to run it using launcher (using `danser` executable) or
 a command-line application/terminal:

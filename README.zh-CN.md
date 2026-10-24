@@ -6,8 +6,8 @@
 
 [English](README.md)
 
-[![GitHub release](https://img.shields.io/github/release/wieku/danser-go.svg)](https://github.com/Wieku/danser-go/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/wieku/danser-go/total?label=Downloads)](https://github.com/Wieku/danser-go/releases)
+[![GitHub release](https://img.shields.io/github/release/Chesszyh/danser-go.svg)](https://github.com/Chesszyh/danser-go/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Chesszyh/danser-go/total?label=Downloads)](https://github.com/Chesszyh/danser-go/releases)
 [![CodeFactor](https://www.codefactor.io/repository/github/wieku/danser-go/badge)](https://www.codefactor.io/repository/github/wieku/danser-go)
 [![Discord server](https://img.shields.io/discord/713705871758065685.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/UTPvbe8)
 
@@ -29,7 +29,7 @@ Danser 仍在开发中，部分功能可能出现问题。遇到问题时，请�
 
 ## 运行 Danser
 
-可以从上游 [releases](https://github.com/Wieku/danser-go/releases) 下载 Windows／Linux 64 位二进制文件。
+可以从本仓库 [releases](https://github.com/Chesszyh/danser-go/releases) 下载 Windows／Linux 64 位二进制文件。
 
 解压到目标目录后，使用启动器 `danser`，或从终端启动。Windows cmd：
 
@@ -99,7 +99,7 @@ Linux／Unix／Git Bash／PowerShell：
 
 ### 依赖
 
-- [64 位 Go，至少 1.24](https://go.dev/dl/)。
+- [64 位 Go，版本见 `go.mod`](https://go.dev/dl/)。
 - Linux／Unix 使用 gcc／g++；Windows 使用 [WinLibs](http://winlibs.com/) MSVCRT+POSIX，TDM-GCC 不可用，mingw-w64 已过时。
 - OpenGL 库，通常随驱动提供；Linux 服务器构建可安装 `libgl1-mesa-dev`。
 - Linux 需要 xorg-dev、libgtk-3 和 libgtk-3-dev。

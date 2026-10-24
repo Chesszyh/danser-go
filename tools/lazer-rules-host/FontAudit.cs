@@ -9,8 +9,8 @@ namespace Danser.LazerRulesHost;
 
 internal static class FontAudit
 {
-    private const string sourceRevision = "742ca60d4e7273dce0cac2fced7cd132f26f11c8";
-    private const string lockHash = "1ca193dfe0510c2c88ee3d6732b0c187447dc6233262df9b97fd85fb8c08423f";
+    private const string sourceRevision = "46d344264e5938e168cfbbd2c8fab5f572ebeda4";
+    private const string lockHash = "042229e5527079d131e8ce4ce535906ea73f1ec7577d7c8f8398c5a1d30c58e7";
 
     public static int Run(string manifestPath, string lockPath)
     {
@@ -30,7 +30,7 @@ internal static class FontAudit
 
         Assembly assembly = OsuResources.ResourceAssembly;
         require(assembly.GetName().Name == "osu.Game.Resources", "Resource assembly name differs");
-        require(assembly.GetName().Version == new Version(2026, 909, 0, 0), "Resource assembly version differs");
+        require(assembly.GetName().Version == new Version(2026, 1021, 0, 0), "Resource assembly version differs");
         var expected = new Dictionary<string, string>();
         int aliases = 0;
         foreach (var mapping in root.GetProperty("mappings").EnumerateArray())

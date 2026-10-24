@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 export GOOS=windows
 export GOARCH=amd64
 export CGO_ENABLED=1
@@ -11,7 +12,8 @@ export TARGET_DIR=./dist/artifacts
 
 exec=$1
 build=$1
-ver=${1//./,}','
+numeric_version=${1%%-*}
+ver=${numeric_version//./,}','
 
 buildMode=${DANSER_BUILD_MODE:-"0"}
 
@@ -87,6 +89,11 @@ $CC <<< --verbose -O3 -D LAUNCHER -o $BUILD_DIR/danser.exe -I. cmain/main_danser
 rm $BUILD_DIR/{danser.syso,danser-core.h}
 
 go run tools/ffmpeg/ffmpeg.go $BUILD_DIR/
+
+tools/lazer-rules-host/publish.sh win-x64 "$BUILD_DIR/lazer-rules-host"
+"$BUILD_DIR/lazer-rules-host/danser-lazer-rules.exe" audit-fonts \
+  "$BUILD_DIR/lazer-rules-host/LazerFonts/OPEN_FONT_PROVENANCE.json" \
+  "$BUILD_DIR/lazer-rules-host/LazerFonts/pinned-resource-lock.json.gz"
 
 fi
 

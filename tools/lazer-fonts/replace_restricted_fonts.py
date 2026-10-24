@@ -19,8 +19,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-COMMIT = "742ca60d4e7273dce0cac2fced7cd132f26f11c8"
-LOCK_SHA256 = "1ca193dfe0510c2c88ee3d6732b0c187447dc6233262df9b97fd85fb8c08423f"
+COMMIT = "46d344264e5938e168cfbbd2c8fab5f572ebeda4"
+LOCK_SHA256 = "042229e5527079d131e8ce4ce535906ea73f1ec7577d7c8f8398c5a1d30c58e7"
 PROJECT = "osu.Game.Resources"
 RESTRICTED = ("Torus", "Torus-Alternate", "Venera")
 NOTICE_PATH = "Fonts/OPEN_FONT_SUBSTITUTIONS.txt"

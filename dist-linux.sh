@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 export GOOS=linux
 export GOARCH=amd64
 export CGO_ENABLED=1
@@ -31,6 +32,11 @@ gcc -no-pie --verbose -O3 -D LAUNCHER -o $BUILD_DIR/danser -I. cmain/main_danser
 rm $BUILD_DIR/danser-core.h
 
 go run tools/ffmpeg/ffmpeg.go $BUILD_DIR/
+
+tools/lazer-rules-host/publish.sh linux-x64 "$BUILD_DIR/lazer-rules-host"
+"$BUILD_DIR/lazer-rules-host/danser-lazer-rules" audit-fonts \
+  "$BUILD_DIR/lazer-rules-host/LazerFonts/OPEN_FONT_PROVENANCE.json" \
+  "$BUILD_DIR/lazer-rules-host/LazerFonts/pinned-resource-lock.json.gz"
 
 mkdir -p $TARGET_DIR
 

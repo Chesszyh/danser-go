@@ -180,6 +180,7 @@ def main():
         verify_live(host, fixture / "macos-smoke.osu", env, evidence, expected_osu, object_count)
         patch = json.dumps({
             "General": {"OsuSongsDir": str(fixture.parent)},
+            "Gameplay": {"LazerRulesEngine": "official"},
             "Graphics": {"Fullscreen": False, "WindowWidth": 640, "WindowHeight": 360,
                          "Experimental": {"UsePersistentBuffers": True}},
             "Recording": {"FrameWidth": 640, "FrameHeight": 360, "FPS": 30,
@@ -187,12 +188,16 @@ def main():
                           "libx264": {"Preset": "ultrafast"}},
         })
         common = [str(binary), "-noupdatecheck", "-replay=" + str(fixture / "macos-smoke.osr"),
-                  "-sPatch=" + patch, "-quickstart"]
+                  "-sPatch=" + patch, "-quickstart", "-mods=NF"]
         with (evidence / "screenshot.log").open("w") as log:
             run(*common, "-ss=20", "-out=ci-smoke", env=env, stdout=log, stderr=subprocess.STDOUT)
         screenshot = Path(env["HOME"]) / "Library/Application Support/danser/screenshots/ci-smoke.png"
         assert screenshot.is_file() and screenshot.stat().st_size > 1000
         shutil.copy2(screenshot, evidence / "ci-smoke.png")
+        common[2] = "-replay=" + str(fixture / "macos-smoke-lazer.osr")
+        with (evidence / "official-screenshot.log").open("w") as log:
+            run(*common, "-ss=20", "-out=ci-official", env=env, stdout=log, stderr=subprocess.STDOUT)
+        assert "Using official osu!lazer rules from " + expected_osu in (evidence / "official-screenshot.log").read_text()
         with (evidence / "recording.log").open("w") as log:
             run(*common, "-record", "-start=20", "-end=23", "-out=ci-smoke", env=env,
                 stdout=log, stderr=subprocess.STDOUT)
