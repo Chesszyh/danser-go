@@ -1,4 +1,4 @@
-name: Linux and Windows
+name: Linux
 
 on:
   pull_request:
@@ -20,15 +20,7 @@ concurrency:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            platform: linux
-          - os: windows-latest
-            platform: win
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
       run:
@@ -41,17 +33,10 @@ jobs:
         with:
           submodules: recursive
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y xorg-dev libgl1-mesa-dev libgtk-3-dev
           echo "LD_LIBRARY_PATH=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-      - name: Install Windows compiler
-        if: runner.os == 'Windows'
-        uses: bwoodsend/setup-winlibs-action@v1
-      - name: Add Windows runtime libraries to PATH
-        if: runner.os == 'Windows'
-        run: echo "$GITHUB_WORKSPACE" >> "$GITHUB_PATH"
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -63,7 +48,6 @@ jobs:
           go test -p 2 -tags 'exclude_cimgui_glfw exclude_cimgui_sdli' ./...
           go test -C tools/ffmpeg ./...
       - name: Test distribution tooling
-        if: runner.os == 'Linux'
         run: |
           python3 tools/test_macos_deps.py
           python3 tools/test_macos_bundle_smoke.py
@@ -74,13 +58,12 @@ jobs:
       - name: Build distribution with official rules
         env:
           DANSER_VERSION: ${{ inputs.version || 'dev' }}
-          PLATFORM: ${{ matrix.platform }}
+          PLATFORM: linux
         run: |
           version="$DANSER_VERSION"
           if [[ "$version" == dev ]]; then version=0.0.0-dev; fi
           bash "dist-$PLATFORM.sh" "$version"
       - name: Verify Linux archive executables
-        if: runner.os == 'Linux'
         run: |
           python3 - <<'PYARCHIVE'
           import glob, zipfile
@@ -90,7 +73,7 @@ jobs:
           PYARCHIVE
       - uses: actions/upload-artifact@v4
         with:
-          name: danser-${{ matrix.platform }}
+          name: danser-linux
           path: dist/artifacts/*.zip
           if-no-files-found: error
           compression-level: 0

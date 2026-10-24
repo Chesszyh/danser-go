@@ -28,7 +28,7 @@ This fork supports Apple Silicon Macs running macOS 15 or newer through an OpenG
 
 ## Running Danser
 
-You can download the newest Windows/Linux 64-bit binaries from [releases](https://github.com/Chesszyh/danser-go/releases).
+You can download the newest Linux x86-64 and macOS arm64 binaries from [releases](https://github.com/Chesszyh/danser-go/releases).
 
 After unpacking it to your desired directory, you need to run it using launcher (using `danser` executable) or
 a command-line application/terminal:

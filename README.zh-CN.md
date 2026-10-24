@@ -29,7 +29,7 @@ Danser 仍在开发中，部分功能可能出现问题。遇到问题时，请�
 
 ## 运行 Danser
 
-可以从本仓库 [releases](https://github.com/Chesszyh/danser-go/releases) 下载 Windows／Linux 64 位二进制文件。
+可以从本仓库 [releases](https://github.com/Chesszyh/danser-go/releases) 下载 Linux x86-64 和 macOS arm64 二进制文件。
 
 解压到目标目录后，使用启动器 `danser`，或从终端启动。Windows cmd：
 

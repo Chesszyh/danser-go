@@ -56,7 +56,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           mkdir release-assets
-          cp artifacts/danser-linux/*.zip artifacts/danser-win/*.zip release-assets/
+          cp artifacts/danser-linux/*.zip release-assets/
           cp artifacts/danser-macos/* release-assets/
           flags=()
           if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
