@@ -15,9 +15,9 @@ import (
 func main() {
 	targetDir, _ := filepath.Abs(os.Args[1])
 
-	archiveName := "ffmpeg-n7.1-latest-linux64-gpl-shared-7.1"
+	archiveName := "ffmpeg-n8.1-latest-linux64-gpl-shared-8.1"
 	if runtime.GOOS == "windows" {
-		archiveName = "ffmpeg-n7.1-latest-win64-gpl-shared-7.1"
+		archiveName = "ffmpeg-n8.1-latest-win64-gpl-shared-8.1"
 	}
 
 	downloadUrl := "https://github.com/Wieku/FFmpeg-Builds/releases/download/latest/" + archiveName + ".zip"
@@ -108,6 +108,10 @@ func download(url string) *os.File {
 	}
 
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		panic(fmt.Errorf("downloading FFmpeg: HTTP %s", resp.Status))
+	}
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
