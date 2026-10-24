@@ -70,6 +70,15 @@ jobs:
           version="$DANSER_VERSION"
           if [[ "$version" == dev ]]; then version=0.0.0-dev; fi
           bash "dist-$PLATFORM.sh" "$version"
+      - name: Verify Linux archive executables
+        if: runner.os == 'Linux'
+        run: |
+          python3 - <<'PYARCHIVE'
+          import glob, zipfile
+          with zipfile.ZipFile(glob.glob('dist/artifacts/*.zip')[0]) as archive:
+              for name in ('danser', 'danser-cli', 'lazer-rules-host/danser-lazer-rules'):
+                  assert (archive.getinfo(name).external_attr >> 16) & 0o111, name
+          PYARCHIVE
       - uses: actions/upload-artifact@v4
         with:
           name: danser-${{ matrix.platform }}

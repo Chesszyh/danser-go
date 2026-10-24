@@ -26,7 +26,13 @@ func main() {
 		if !info.IsDir() {
 			trunc := strings.ReplaceAll(strings.TrimPrefix(osFilePath, srcPath), "\\", "/")
 			log.Println("Packing:", osFilePath)
-			fileWriter, err := writer.Create(trunc)
+			header, err := zip.FileInfoHeader(info)
+			if err != nil {
+				panic(err)
+			}
+			header.Name = trunc
+			header.Method = zip.Deflate
+			fileWriter, err := writer.CreateHeader(header)
 			if err != nil {
 				panic(err)
 			}
