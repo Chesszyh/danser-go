@@ -1,0 +1,23 @@
+.github/workflows/native.yml
+  s_c09c54e61dfcba::t_facc6e5b6203b9 42
+docs/releases/v0.12.1-lazer.6.md
+  s_c09c54e61dfcba::t_1c41fe3b9f72b8 1-7
+tools/linux-rules-smoke.py
+  s_c09c54e61dfcba::t_6fea9dd01c9947 25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3916cd1d3943e4b7a83a492e460a81d60be4eb1",
+  "prompts": {},
+  "sessions": {
+    "s_c09c54e61dfcba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18c75-a0fa-73c2-93d1-584cfc9a25f8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Chesszyh <chesszyh987@gmail.com>"
+    }
+  }
+}
