@@ -1,0 +1,25 @@
+docs/releases/README.md
+  s_c09c54e61dfcba::t_55565a886b95cc 25-27
+docs/releases/v0.12.1-lazer.5.md
+  s_c09c54e61dfcba::t_98e38f4b67c67a 6
+tools/automation/test_update_lazer.py
+  s_c09c54e61dfcba::t_8a3e45ce05ac01 41-46
+tools/automation/update-lazer.py
+  s_c09c54e61dfcba::t_a8352c876a4330 15-18,54-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "62e3352cca350c8ba9529961d2adfbc3c34f2697",
+  "prompts": {},
+  "sessions": {
+    "s_c09c54e61dfcba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18c75-a0fa-73c2-93d1-584cfc9a25f8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Chesszyh <chesszyh987@gmail.com>"
+    }
+  }
+}
