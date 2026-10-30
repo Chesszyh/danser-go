@@ -1,0 +1,82 @@
+docs/releases/README.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 3-6,9-56
+README.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 152-153
+README.zh-CN.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 71,116
+tools/lazer-rules-host/README.zh-CN.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 38
+app/app.go
+  s_c09c54e61dfcba::t_3559216dfe87ea 198-204
+  s_c09c54e61dfcba::t_e9f1148d9eb6bb 131
+tools/lazer-rules-host/IMPLEMENTATION.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 7
+.github/workflows/release.yml
+  s_c09c54e61dfcba::t_3ba91dc95b1509 6,26,29,53-58
+  s_c09c54e61dfcba::t_fe085c11abe5f9 69-76
+launcher/commandbuilder.go
+  s_c09c54e61dfcba::t_e9f1148d9eb6bb 60,80-82,151,157-160
+  s_c09c54e61dfcba::t_3559216dfe87ea 201,216-218,220-221
+tools/automation/update-lazer.py
+  s_c09c54e61dfcba::t_3ba91dc95b1509 1-93,95-149
+  s_c09c54e61dfcba::t_fe085c11abe5f9 94
+tools/lazer-rules-host/IMPLEMENTATION.zh-CN.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 7
+launcher/commandbuilder_test.go
+  s_c09c54e61dfcba::t_e36fed081ef281 1-3,5-6,9-12,16,20,24,55
+  s_c09c54e61dfcba::t_6f762c96587214 7,28-38,42-51
+  s_c09c54e61dfcba::t_7193526139ee57 13-15,17-19,21-23,25-27
+  s_c09c54e61dfcba::t_435dd4047f48f0 4,8,39-41,52-54
+docs/releases/v0.12.1-lazer.5.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 1-7
+tools/lazer-rules-host/README.md
+  s_c09c54e61dfcba::t_fe085c11abe5f9 38
+app/utils/update_test.go
+  s_c09c54e61dfcba::t_7193526139ee57 33-35,39-41,51-53,56-58,62-65,68-70
+  s_c09c54e61dfcba::t_e36fed081ef281 1-32,36-38,42-50,54-55,59-61,66-67,71-73
+dist-macos.sh
+  s_c09c54e61dfcba::t_fe085c11abe5f9 21-23,137,153-157
+tools/macos-install.py
+  s_c09c54e61dfcba::t_d5678d94d0906e 1-3,5-81,83-97,99-137
+  s_c09c54e61dfcba::t_3559216dfe87ea 4,98
+  s_c09c54e61dfcba::t_cd0ddf56f60c71 82
+.github/workflows/native.yml
+  s_c09c54e61dfcba::t_3ba91dc95b1509 10-12,37,56-57
+  s_c09c54e61dfcba::t_5bf3dd4f0d3dc1 72-73
+app/utils/update.go
+  s_c09c54e61dfcba::t_7193526139ee57 10,12,19,23-24,27-29,31-36,39-52,57-61,63-72,74-93,95,109,112-116,121-124,126,128
+  s_c09c54e61dfcba::t_a7a45d90713f31 11,15-17,55-56
+app/settings/gameplay.go
+  s_c09c54e61dfcba::t_e9f1148d9eb6bb 248
+launcher/utils.go
+  s_c09c54e61dfcba::t_e9f1148d9eb6bb 10,57-61
+.github/workflows/lazer-update.yml
+  s_c09c54e61dfcba::t_fe085c11abe5f9 26,45,53
+  s_c09c54e61dfcba::t_3ba91dc95b1509 1-25,27-44,46-52,54-76
+.github/workflows/macos.yml
+  s_c09c54e61dfcba::t_3ba91dc95b1509 10-12,38,51-52
+tools/automation/test_update_lazer.py
+  s_c09c54e61dfcba::t_3811268ab363bc 1-71
+tools/linux-rules-smoke.py
+  s_c09c54e61dfcba::t_e36633f74f74fa 1-40
+tools/macos-bundle-smoke.py
+  s_c09c54e61dfcba::t_6261005a5bfac0 145,148-166,245,248
+tools/test_macos_install.py
+  s_c09c54e61dfcba::t_bba0363af97471 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "90ba65afbc6160a4e97c92e93f8a592eb385f58c",
+  "prompts": {},
+  "sessions": {
+    "s_c09c54e61dfcba": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18c75-a0fa-73c2-93d1-584cfc9a25f8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Chesszyh <chesszyh987@gmail.com>"
+    }
+  }
+}
