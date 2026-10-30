@@ -128,7 +128,7 @@ func run() {
 		out := flag.String("out", "", "If -ss flag is used, sets the name of screenshot, extension is PNG. If not, it overrides -record flag, specifies the name of recorded video file, extension is managed by settings")
 		ss := flag.Float64("ss", math.NaN(), "Screenshot mode. Snap single frame from danser at given time in seconds. Specify the name of file by -out, resolution is managed by Recording settings")
 
-		mods := flag.String("mods", "", "Specify beatmap/play mods")
+		mods := flag.String("mods", "LZ", "Specify beatmap/play mods; LZ (osu!lazer) is the default, use -mods= for stable")
 		mods2 := flag.String("mods2", "", "Specify beatmap/play mods, lazer style")
 
 		replay := flag.String("replay", "", replayDesc)
@@ -195,6 +195,13 @@ func run() {
 			panic("Incompatible flags selected: -ss, -record")
 		}
 
+		if *knockout {
+			explicitMods := false
+			flag.Visit(func(f *flag.Flag) { explicitMods = explicitMods || f.Name == "mods" })
+			if !explicitMods {
+				*mods = ""
+			}
+		}
 		modsParsed := difficulty2.ParseMods(*mods)
 		var modsNew []rplpa.ModInfo = nil
 

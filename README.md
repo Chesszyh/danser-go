@@ -149,3 +149,5 @@ Software created by Sebastian Krajewski ([@Wieku](https://github.com/Wieku)) and
 Unless stated otherwise, source files are distributed under GNU General Public License v3.0
 
 Full credits and licenses of 3rd party assets can be found [here](CREDITS.md).
+
+New configurations use the official lazer rules host; build it alongside source builds as described in the [host guide](tools/lazer-rules-host/README.md). New gameplay defaults to `LZ`; pass `-mods=` for stable gameplay. Replay scoring follows the replay format. Existing engine selections are preserved.

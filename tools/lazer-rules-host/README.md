@@ -35,7 +35,7 @@ Set `Gameplay.LazerRulesEngine` to `official` in the selected settings file. For
   -md5=<beatmap-md5>
 ```
 
-The built-in engine remains the default so existing source builds and non-replay modes keep working without the .NET host.
+New configurations default to the official engine. Build the companion host for source builds. Existing engine selections are preserved; set `Gameplay.LazerRulesEngine` to `danser` to use the built-in engine. New gameplay defaults to LZ; stable replays retain their original scoring.
 
 ## Verify independently
 

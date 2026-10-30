@@ -18,6 +18,9 @@ deps_dir=$(CDPATH= cd -- "$deps_dir" && pwd)
 export DANSER_MACOS_DEPS_DIR="$deps_dir"
 dotnet_cmd=${DOTNET:-dotnet}
 version=${1:-dev-macos}
+version=${version#v}
+short_version=${version%%-*}
+case "$short_version" in dev*|'') short_version=0.0.0 ;; esac
 bundle_version=${2:-0.0.0}
 deployment_target=15.0
 
@@ -131,7 +134,7 @@ cat >"$app_dir/Contents/Info.plist" <<EOF
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$bundle_version</string>
+	<string>$short_version</string>
 	<key>CFBundleVersion</key>
 	<string>$bundle_version</string>
 	<key>LSApplicationCategoryType</key>
@@ -147,7 +150,11 @@ cat >"$app_dir/Contents/Info.plist" <<EOF
 EOF
 
 plutil -lint "$app_dir/Contents/Info.plist"
-codesign --force --deep --sign - "$app_dir"
+if [ "${CI:-}" != true ] && command -v local-codesign >/dev/null 2>&1; then
+	local-codesign "$app_dir"
+else
+	codesign --force --deep --sign - "$app_dir"
+fi
 codesign --verify --deep --strict --verbose=2 "$app_dir"
 
 echo "$app_dir"

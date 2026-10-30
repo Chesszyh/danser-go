@@ -7,6 +7,7 @@ import (
 	"github.com/wieku/danser-go/app/utils"
 	"github.com/wieku/danser-go/framework/env"
 	"github.com/wieku/danser-go/framework/platform"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -53,7 +54,11 @@ func checkForUpdates(pingUpToDate bool) {
 			showMessage(mInfo, "You're using the newest version of danser.")
 		}
 	case utils.Failed:
-		showMessage(mError, "Can't get version from GitHub: %v", err)
+		if pingUpToDate {
+			showMessage(mError, "Can't check for updates: %v", err)
+		} else {
+			log.Println("Can't check for updates:", err)
+		}
 	case utils.Snapshot:
 		if showMessage(mQuestion, "You're using a snapshot version of danser.\nFor newer version of snapshots please visit the official danser discord server at: %s\n\nDo you want to go there?", url) {
 			platform.OpenURL(url)

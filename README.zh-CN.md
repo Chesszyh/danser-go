@@ -68,7 +68,7 @@ Linux／Unix／Git Bash／PowerShell：
 - `-record`：录制视频，需要可访问的 [FFmpeg](https://github.com/Wieku/danser-go/wiki/FFmpeg)。
 - `-out=abcd`：隐含启用录制并指定文件名，扩展名由设置决定；使用 `-ss` 时指定截图名。
 - `-replay="path_to_replay.osr"` 或 `-r="path_to_replay.osr"`：播放回放，覆盖选图参数。路径中的 `\` 请替换为 `\\` 或 `/`。
-- `-mods=HDHR`：使用指定 Mods；指定时覆盖回放 Mods。`-mods=AT` 会启用带回放界面的光标舞蹈。
+- `-mods=HDHR`：使用指定 Mods；默认 `LZ`，`-mods=` 选择 stable；指定时覆盖回放 Mods。`-mods=AT` 会启用带回放界面的光标舞蹈。
 - `-mods2='[{"acronym":"DT","settings":{"speed_change":1.2}},{"acronym":"HD"}]'`：使用支持自定义参数的 lazer Mods 结构；指定时覆盖回放 Mods，加入 AT 同样启用带回放界面的光标舞蹈。
 - `-skin`：覆盖 `Skin.CurrentSkin`。
 - `-cs`、`-ar`、`-od`、`-hp`：覆盖圆圈大小、出现速度、判定难度及掉血设置，允许超出 osu! 常规范围；`-mods2` 指定 DA（Difficulty Adjust，难度调整）时忽略。
@@ -113,7 +113,7 @@ Linux／Unix／Git Bash／PowerShell：
 go build
 ```
 
-该命令会自动下载并构建所需依赖。然后运行：
+该命令会下载并构建 Go 依赖。新配置默认使用官方 lazer 规则，请同时按下文说明构建配套规则程序。然后运行：
 
 ```bash
 ./danser-go <arguments>

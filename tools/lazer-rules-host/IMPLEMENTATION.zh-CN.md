@@ -4,7 +4,7 @@
 
 ## 职责与源码版本
 
-Danser 负责渲染和游玩调度，配套 C# 进程执行固定版本的官方 osu!standard 规则。源码构建仍默认使用原有 Go 评分引擎；独立 Linux 安装则在自己的初始配置中选择官方引擎。入口和支持范围见[规则程序说明](README.zh-CN.md)。
+Danser 负责渲染和游玩调度，配套 C# 进程执行固定版本的官方 osu!standard 规则。新配置默认选择官方引擎，新建游玩默认开启 LZ；已有引擎设置和 stable 回放计分保持不变。入口和支持范围见[规则程序说明](README.zh-CN.md)。
 
 `third_party/osu` 是 Git 子模块，因此每个 danser 提交都能确定所依赖的 osu! 源码版本。[Danser.LazerRulesHost.csproj](Danser.LazerRulesHost.csproj) 的 `AddOsuSourceRevision` 构建目标将该版本写入规则程序程序集，响应通过 `engine.osuSourceRevision` 返回。规则程序直接引用 `osu.Game` 和 `osu.Game.Rulesets.Osu`，不在 Go 中维护评分或表现分公式的翻译副本。
 

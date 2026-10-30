@@ -4,7 +4,7 @@
 
 ## Responsibility and source identity
 
-Danser renders and schedules gameplay; the companion C# process executes the pinned official osu!standard rules. The original Go scoring engine remains the source-build default. The separate Linux installation seeds its own settings with the official engine selected. Engine scope and invocation are defined in the [host guide](README.md).
+Danser renders and schedules gameplay; the companion C# process executes the pinned official osu!standard rules. New configurations select the official engine, and new gameplay starts in LZ mode. Existing engine settings and stable replay scoring are preserved. Engine scope and invocation are defined in the [host guide](README.md).
 
 `third_party/osu` is a Git submodule, so a danser commit identifies the exact osu! source dependency. The build target `AddOsuSourceRevision` in [Danser.LazerRulesHost.csproj](Danser.LazerRulesHost.csproj) embeds that revision into the host assembly. Responses expose it as `engine.osuSourceRevision`. The host references `osu.Game` and `osu.Game.Rulesets.Osu` directly; danser does not maintain a translated copy of their scoring or performance formulas.
 

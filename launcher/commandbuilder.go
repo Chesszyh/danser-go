@@ -57,7 +57,7 @@ type builder struct {
 }
 
 func newBuilder() *builder {
-	return &builder{
+	b := &builder{
 		speed: floatParam{
 			ogValue: 1,
 			value:   1,
@@ -77,6 +77,9 @@ func newBuilder() *builder {
 		baseDiff:   difficulty.NewDifficulty(1, 1, 1, 1),
 		diff:       difficulty.NewDifficulty(1, 1, 1, 1),
 	}
+	b.baseDiff.SetMods(difficulty.Lazer)
+	b.diff.SetMods(difficulty.Lazer)
+	return b
 }
 
 func (b *builder) setMap(bMap *beatmap.BeatMap) {
@@ -145,11 +148,16 @@ func (b *builder) setReplay(replay *rplpa.Replay) {
 }
 
 func (b *builder) removeReplay() {
+	hadReplay := b.currentReplay != nil
 	b.currentReplay = nil
 	b.sourceDiff.RemoveMod(^difficulty.None)
 	b.sourceDiff.ScoreVersion = 0
 	b.baseDiff.ScoreVersion = 0
 	b.diff.ScoreVersion = 0
+	if hadReplay {
+		b.baseDiff.SetMods(difficulty.Lazer)
+		b.diff.SetMods(difficulty.Lazer)
+	}
 }
 
 func (b *builder) numKnockoutReplays() (ret int) {
@@ -190,6 +198,7 @@ func (b *builder) getArguments() (args []string) {
 		if currentMode == Play {
 			args = append(args, "-play")
 		} else if currentMode == Knockout {
+			diffClone.RemoveMod(difficulty.Lazer)
 			var list []string
 
 			for _, r := range b.knockoutReplays {
@@ -204,11 +213,12 @@ func (b *builder) getArguments() (args []string) {
 			diffClone.AddMod(difficulty.Autoplay)
 		}
 
-		if diffClone.Mods != difficulty.None {
-			bt, _ := json.Marshal(diffClone.ExportMods2())
-
-			args = append(args, "-mods2", string(bt))
+		mods := diffClone.ExportMods2()
+		if mods == nil {
+			mods = []rplpa.ModInfo{}
 		}
+		bt, _ := json.Marshal(mods)
+		args = append(args, "-mods2", string(bt))
 	}
 
 	if currentMode != Play && currentPMode != Watch {

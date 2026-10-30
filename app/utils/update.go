@@ -3,70 +3,96 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/wieku/danser-go/build"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/wieku/danser-go/build"
 )
 
-// GetLatestVersionFromGitHub makes a request to GitHub and returns url and tag of the latest version found
+var updateClient = &http.Client{Timeout: 10 * time.Second}
+
+// GetLatestVersionFromGitHub includes fork releases marked as prereleases.
 func GetLatestVersionFromGitHub() (url string, tag string, err error) {
-	request, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/Wieku/danser-go/releases/latest", nil)
+	request, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/Chesszyh/danser-go/releases?per_page=100", nil)
 	if err != nil {
 		return "", "", err
 	}
-
-	client := new(http.Client)
-	response, err := client.Do(request)
-
-	if err != nil || response.StatusCode != 200 {
+	response, err := updateClient.Do(request)
+	if err != nil {
 		return "", "", err
 	}
-
-	defer func() {
-		err := response.Body.Close()
-		if err != nil {
-			panic(err)
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("GitHub releases returned HTTP %d", response.StatusCode)
+	}
+	var releases []struct {
+		URL   string `json:"html_url"`
+		Tag   string `json:"tag_name"`
+		Draft bool   `json:"draft"`
+	}
+	if err = json.NewDecoder(response.Body).Decode(&releases); err != nil {
+		return "", "", err
+	}
+	var highest uint64
+	for _, release := range releases {
+		version, parseErr := TransformVersion(release.Tag)
+		if release.Draft || parseErr != nil {
+			continue
 		}
-	}()
-
-	var data struct {
-		URL string `json:"html_url"`
-		Tag string `json:"tag_name"`
+		if tag == "" || version > highest {
+			url, tag, highest = release.URL, release.Tag, version
+		}
 	}
-
-	err = json.NewDecoder(response.Body).Decode(&data)
-	if err != nil {
-		return "", "", err
+	if tag == "" {
+		return "", "", fmt.Errorf("no supported danser release was found")
 	}
-
-	return data.URL, data.Tag, nil
+	return url, tag, nil
 }
 
-// TransformVersion transfers version to a more comparable format.
-//   - 0.6.7 becomes 600079999
-//   - 0.6.7-s(napshot)12 becomes 600070012
-//   - 1.0.0 becomes 1000000009999
-func TransformVersion(version string) uint64 {
-	currentSplit := strings.Split(version, "-")
-	splitDots := strings.Split(strings.TrimSuffix(currentSplit[0], "b"), ".")
-
-	for i, s := range splitDots {
-		splitDots[i] = fmt.Sprintf("%04s", s)
+// TransformVersion orders numeric releases, legacy snapshots and fork revisions.
+func TransformVersion(version string) (uint64, error) {
+	base, suffix, hasSuffix := strings.Cut(strings.TrimPrefix(version, "v"), "-")
+	parts := strings.Split(strings.TrimSuffix(base, "b"), ".")
+	invalid := func() (uint64, error) { return 0, fmt.Errorf("unsupported danser version %q", version) }
+	if len(parts) != 3 {
+		return invalid()
 	}
-
-	snapshot := "9999"
-	if len(currentSplit) > 1 && !strings.HasPrefix(currentSplit[1], "dev") {
-		snapshot = fmt.Sprintf("%04s", strings.TrimPrefix(strings.TrimPrefix(currentSplit[1], "s"), "napshot"))
+	var result uint64
+	for _, part := range parts {
+		if part == "" || strings.Trim(part, "0123456789") != "" {
+			return invalid()
+		}
+		number, err := strconv.ParseUint(part, 10, 16)
+		if err != nil || number > 9999 {
+			return invalid()
+		}
+		result = result*10000 + number
 	}
-
-	versionInt, err := strconv.ParseUint(strings.Join(splitDots, "")+snapshot, 10, 64)
-	if err != nil {
-		panic(err)
+	revision := uint64(9999)
+	if hasSuffix {
+		switch {
+		case strings.HasPrefix(suffix, "lazer."):
+			suffix = strings.TrimPrefix(suffix, "lazer.")
+		case strings.HasPrefix(suffix, "snapshot"):
+			suffix = strings.TrimPrefix(suffix, "snapshot")
+		case strings.HasPrefix(suffix, "s"):
+			suffix = strings.TrimPrefix(suffix, "s")
+		default:
+			return invalid()
+		}
+		if suffix == "" || strings.Trim(suffix, "0123456789") != "" {
+			return invalid()
+		}
+		number, err := strconv.ParseUint(suffix, 10, 16)
+		if err != nil || number >= 9999 {
+			return invalid()
+		}
+		revision = number
 	}
-
-	return versionInt
+	return result*10000 + revision, nil
 }
 
 type UpdateStatus int
@@ -80,27 +106,24 @@ const (
 )
 
 func CheckForUpdate() (UpdateStatus, string, error) {
-	if build.Stream != "Release" || strings.Contains(build.VERSION, "dev") { // false positive, those are changed during compile
+	if build.Stream != "Release" || strings.Contains(build.VERSION, "dev") {
 		return Ignored, "", nil
 	}
-
-	log.Println("Checking Github for a new version of danser...")
-
+	exeVersion, err := TransformVersion(build.VERSION)
+	if err != nil {
+		return Failed, "", err
+	}
+	log.Println("Checking GitHub for a new version of danser...")
 	url, tag, err := GetLatestVersionFromGitHub()
 	if err != nil {
 		return Failed, "", err
 	}
-
-	githubVersion := TransformVersion(tag)
-	exeVersion := TransformVersion(build.VERSION)
-
-	if exeVersion >= githubVersion {
-		if strings.Contains(build.VERSION, "snapshot") {
-			return Snapshot, "https://wieku.me/lair", nil
-		} else {
-			return UpToDate, "", nil
-		}
-	} else {
-		return UpdateAvailable, url, nil
+	githubVersion, err := TransformVersion(tag)
+	if err != nil {
+		return Failed, "", err
 	}
+	if exeVersion >= githubVersion {
+		return UpToDate, "", nil
+	}
+	return UpdateAvailable, url, nil
 }

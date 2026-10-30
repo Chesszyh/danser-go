@@ -245,7 +245,7 @@ func initGameplay() *gameplay {
 		PPVersion:               "latest",
 		LazerClassicScore:       false,
 		AlwaysSkipIntro:         false,
-		LazerRulesEngine:        "danser",
+		LazerRulesEngine:        "official",
 	}
 }
 

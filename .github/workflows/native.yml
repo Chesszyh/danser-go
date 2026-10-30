@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
+      ref:
+        type: string
+        default: ''
       version:
         type: string
         default: dev
@@ -31,6 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           submodules: recursive
       - name: Install Linux dependencies
         run: |
@@ -49,6 +53,8 @@ jobs:
           go test -C tools/ffmpeg ./...
       - name: Test distribution tooling
         run: |
+          python3 tools/test_macos_install.py
+          python3 tools/automation/test_update_lazer.py
           python3 tools/test_macos_deps.py
           python3 tools/test_macos_bundle_smoke.py
           python3 tools/license-preflight/test_collect_notices.py
@@ -63,6 +69,8 @@ jobs:
           version="$DANSER_VERSION"
           if [[ "$version" == dev ]]; then version=0.0.0-dev; fi
           bash "dist-$PLATFORM.sh" "$version"
+      - name: Verify packaged official replay and live rules
+        run: python3 tools/linux-rules-smoke.py
       - name: Verify Linux archive executables
         run: |
           python3 - <<'PYARCHIVE'

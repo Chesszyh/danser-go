@@ -1,0 +1,76 @@
+name: Update official lazer
+
+on:
+  schedule:
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-official-lazer
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+      revision: ${{ steps.update.outputs.revision }}
+      base: ${{ steps.update.outputs.base }}
+      tag: ${{ steps.update.outputs.tag }}
+      version: ${{ steps.update.outputs.version }}
+      pr: ${{ steps.update.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          submodules: recursive
+      - id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/automation/update-lazer.py prepare
+
+  linux:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    uses: ./.github/workflows/native.yml
+    with:
+      ref: ${{ needs.prepare.outputs.revision }}
+      version: ${{ needs.prepare.outputs.version }}
+
+  macos:
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    uses: ./.github/workflows/macos.yml
+    with:
+      ref: ${{ needs.prepare.outputs.revision }}
+      version: ${{ needs.prepare.outputs.version }}
+      bundle-version: ${{ github.run_number }}
+
+  merge-and-release:
+    needs: [prepare, linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge validated update and start release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.prepare.outputs.pr }}
+          REVISION: ${{ needs.prepare.outputs.revision }}
+          BASE: ${{ needs.prepare.outputs.base }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: >-
+          python3 tools/automation/update-lazer.py finish
+          --pr "$PR" --revision "$REVISION" --base "$BASE" --tag "$TAG"

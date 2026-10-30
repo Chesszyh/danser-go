@@ -142,9 +142,28 @@ def main():
         settings.mkdir(parents=True)
         # LoadConfig starts from defaults. An existing empty config ensures the
         # CLI patch is applied before the first beatmap database scan.
-        (settings / "default.json").write_text("{}\n")
+        (settings / "default.json").write_text(json.dumps({"General": {"OsuSongsDir": str(fixture.parent)}}))
         for key in ("DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "DANSER_MACOS_DEPS_DIR"):
             env.pop(key, None)
+        launcher_log = evidence / "launcher-startup.log"
+        with launcher_log.open("w") as log:
+            launcher = subprocess.Popen([str(app / "Contents/MacOS/danser")], env=env,
+                                        stdout=log, stderr=subprocess.STDOUT)
+            try:
+                time.sleep(15)
+                startup = launcher_log.read_text()
+                assert launcher.poll() is None, "Launcher exited during startup"
+                assert "panic:" not in startup and "Launcher crashed" not in startup, startup
+                assert "DatabaseManager: Loaded" in startup, startup
+                assert "BASS Initialized!" in startup, startup
+            finally:
+                if launcher.poll() is None:
+                    launcher.terminate()
+                    try:
+                        launcher.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        launcher.kill()
+                        launcher.wait()
         host = app / "Contents/MacOS/lazer-rules-host/danser-lazer-rules"
         font_dir = app / "Contents/Resources/LazerFonts"
         audit = run(str(host), "audit-fonts", str(font_dir / "OPEN_FONT_PROVENANCE.json"),
@@ -223,10 +242,10 @@ def main():
             os.environ.get("GITHUB_RUN_ID", "local"),
         "checks": ["native Go/OpenGL regressions (previous workflow step)", "relocated app signature",
                    "embedded Inter font replacement audit", "self-contained rules-host rejudgement",
-                   "live rules-host frame/finish protocol", "replay screenshot", "video/audio recording decode"],
+                   "live rules-host frame/finish protocol", "default launcher startup with update checks", "replay screenshot", "video/audio recording decode"],
         "resourceFonts": font_report,
         "limitations": ["ad-hoc signed, not Developer ID signed or notarized", "external FFmpeg CLI required",
-                        "physical Retina/display transitions, interactive launcher lifecycle and thermal behaviour untested"],
+                        "physical Retina/display transitions, extended interactive launcher use and thermal behaviour untested"],
     }
     (evidence.parent / "build-info.json").write_text(json.dumps(provenance, indent=2) + "\n")
     print("Relocated bundle: architecture, signature, self-contained replay rejudgement, screenshot and recording passed")
