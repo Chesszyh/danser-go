@@ -1,9 +1,11 @@
 package launcher
 
 import (
+	"encoding/json"
 	"github.com/wieku/danser-go/app/beatmap"
 	"github.com/wieku/danser-go/app/beatmap/difficulty"
 	"github.com/wieku/rplpa"
+	"os"
 	"slices"
 	"testing"
 )
@@ -51,5 +53,48 @@ func TestKnockoutDoesNotForceLazer(t *testing.T) {
 	i := slices.Index(args, "-mods2")
 	if i < 0 || args[i+1] != "[]" {
 		t.Fatalf("knockout forced lazer on stable replays: %v", args)
+	}
+}
+
+func TestLauncherPlaybackArguments(t *testing.T) {
+	previousMode, previousPMode := launcherConfig.CurrentMode, launcherConfig.CurrentPMode
+	t.Cleanup(func() { launcherConfig.CurrentMode, launcherConfig.CurrentPMode = previousMode, previousPMode })
+	type playbackCase struct {
+		Name string
+		Args []string
+	}
+	var cases []playbackCase
+	for _, tc := range []struct {
+		name string
+		mode Mode
+		mods difficulty.Modifier
+	}{
+		{"cursor-stable", CursorDance, difficulty.None},
+		{"cursor-lazer", CursorDance, difficulty.Lazer},
+		{"autoplay-HR", DanserReplay, difficulty.HardRock},
+		{"autoplay-HD-lazer", DanserReplay, difficulty.Hidden | difficulty.Lazer},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			launcherConfig.CurrentMode, launcherConfig.CurrentPMode = tc.mode, Screenshot
+			b := newBuilder()
+			b.currentMap = &beatmap.BeatMap{MD5: os.Getenv("DANSER_SMOKE_MAP_MD5")}
+			b.diff.SetMods(tc.mods)
+			b.ssTime = 20
+			b.outputName = "launcher-" + tc.name
+			args := b.getArguments()
+			if slices.Contains(args, "-mods") {
+				t.Fatalf("launcher must use the JSON mod argument: %v", args)
+			}
+			cases = append(cases, playbackCase{Name: tc.name, Args: args})
+		})
+	}
+	if path := os.Getenv("DANSER_LAUNCHER_SMOKE_ARGUMENTS"); path != "" {
+		data, err := json.Marshal(cases)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

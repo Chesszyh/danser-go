@@ -152,9 +152,11 @@ func run() {
 
 		flag.Parse()
 
-		if *mods != "" && *mods2 != "" {
-			panic("You can't specify classic and lazer mods at the same time")
+		resolvedMods, modFlagsErr := resolveModsArgument(flag.CommandLine, *mods, *mods2, *knockout || *knockout2 != "")
+		if modFlagsErr != nil {
+			panic(modFlagsErr)
 		}
+		*mods = resolvedMods
 
 		var knockoutReplays []string
 
@@ -195,13 +197,6 @@ func run() {
 			panic("Incompatible flags selected: -ss, -record")
 		}
 
-		if *knockout {
-			explicitMods := false
-			flag.Visit(func(f *flag.Flag) { explicitMods = explicitMods || f.Name == "mods" })
-			if !explicitMods {
-				*mods = ""
-			}
-		}
 		modsParsed := difficulty2.ParseMods(*mods)
 		var modsNew []rplpa.ModInfo = nil
 

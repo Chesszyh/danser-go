@@ -2,6 +2,7 @@
 """Exercise the relocated distribution on a real Apple Silicon macOS runner."""
 
 import json
+import hashlib
 import math
 import os
 from pathlib import Path
@@ -164,6 +165,23 @@ def main():
                     except subprocess.TimeoutExpired:
                         launcher.kill()
                         launcher.wait()
+        argument_file = evidence / "launcher-playback-arguments.json"
+        builder_env = dict(os.environ,
+                           DANSER_SMOKE_MAP_MD5=hashlib.md5((fixture / "macos-smoke.osu").read_bytes()).hexdigest(),
+                           DANSER_LAUNCHER_SMOKE_ARGUMENTS=str(argument_file))
+        run(str(repo / "tools/macos-go.sh"), "test", "-p", "1", "./launcher",
+            "-run", "^TestLauncherPlaybackArguments$", "-count=1", env=builder_env)
+        playback_patch = json.dumps({
+            "General": {"OsuSongsDir": str(fixture.parent)},
+            "Graphics": {"Fullscreen": False, "WindowWidth": 640, "WindowHeight": 360},
+            "Recording": {"FrameWidth": 640, "FrameHeight": 360},
+        })
+        for case in json.loads(argument_file.read_text()):
+            with (evidence / ("launcher-" + case["Name"] + ".log")).open("w") as log:
+                run(str(binary), *case["Args"], "-sPatch=" + playback_patch, env=env,
+                    stdout=log, stderr=subprocess.STDOUT)
+            screenshot = Path(env["HOME"]) / "Library/Application Support/danser/screenshots" / ("launcher-" + case["Name"] + ".png")
+            assert screenshot.is_file() and screenshot.stat().st_size > 1000, case["Name"]
         host = app / "Contents/MacOS/lazer-rules-host/danser-lazer-rules"
         font_dir = app / "Contents/Resources/LazerFonts"
         audit = run(str(host), "audit-fonts", str(font_dir / "OPEN_FONT_PROVENANCE.json"),
@@ -242,7 +260,7 @@ def main():
             os.environ.get("GITHUB_RUN_ID", "local"),
         "checks": ["native Go/OpenGL regressions (previous workflow step)", "relocated app signature",
                    "embedded Inter font replacement audit", "self-contained rules-host rejudgement",
-                   "live rules-host frame/finish protocol", "default launcher startup with update checks", "replay screenshot", "video/audio recording decode"],
+                   "live rules-host frame/finish protocol", "default launcher startup with update checks", "launcher-generated mod playback", "replay screenshot", "video/audio recording decode"],
         "resourceFonts": font_report,
         "limitations": ["ad-hoc signed, not Developer ID signed or notarized", "external FFmpeg CLI required",
                         "physical Retina/display transitions, extended interactive launcher use and thermal behaviour untested"],
