@@ -38,8 +38,12 @@ class UpdateTests(unittest.TestCase):
 
     def test_older_official_release_is_not_a_downgrade(self):
         release = {'draft': False, 'prerelease': False, 'tag_name': '2026.1005.0-lazer'}
-        with patch.object(u, 'api', return_value=release), patch.object(u, 'run', return_value=SHA) as run, \
-                patch.object(u.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)), \
+        def fake_run(*args, **kwargs):
+            if args[-1] == 'FETCH_HEAD^{commit}': return 'old'
+            if args[-1] == 'HEAD': return 'current'
+            if '--format=%ct' in args: return '100' if args[-1] == 'old' else '200'
+            return ''
+        with patch.object(u, 'api', return_value=release), patch.object(u, 'run', side_effect=fake_run) as run, \
                 patch.object(u, 'output') as output:
             u.prepare('owner/repo')
             output.assert_called_once_with(changed='false')

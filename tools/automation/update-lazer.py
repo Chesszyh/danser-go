@@ -12,7 +12,10 @@ VERSION = re.compile(r'v(\d+)\.(\d+)\.(\d+)-lazer\.(\d+)')
 
 
 def run(*args, **kwargs):
-    return subprocess.run(args, check=True, text=True, capture_output=True, **kwargs).stdout.strip()
+    result = subprocess.run(args, text=True, capture_output=True, **kwargs)
+    if result.returncode:
+        raise RuntimeError(f'{args[0]} failed: {result.stderr or result.stdout}')
+    return result.stdout.strip()
 
 
 def api(endpoint, method='GET', **fields):
@@ -48,14 +51,13 @@ def prepare(repo):
     run('git', '-C', 'third_party/osu', 'fetch', 'origin', f'refs/tags/{osu_tag}')
     target = run('git', '-C', 'third_party/osu', 'rev-parse', 'FETCH_HEAD^{commit}')
     current = run('git', '-C', 'third_party/osu', 'rev-parse', 'HEAD')
-    ancestor = subprocess.run(['git', '-C', 'third_party/osu', 'merge-base', '--is-ancestor', target, current])
-    if ancestor.returncode == 0:
-        print(f'{osu_tag} is already included in the pinned source; no downgrade or release needed')
+    target_time = int(run('git', '-C', 'third_party/osu', 'show', '-s', '--format=%ct', target))
+    current_time = int(run('git', '-C', 'third_party/osu', 'show', '-s', '--format=%ct', current))
+    # Official release hotfixes can diverge from master; checkout histories are shallow.
+    if target == current or target_time <= current_time:
+        print(f'{osu_tag} is no newer than the pinned source; no downgrade or release needed')
         output(changed='false')
         return
-    if ancestor.returncode != 1:
-        raise ValueError('Could not compare official release history')
-    run('git', '-C', 'third_party/osu', 'merge-base', '--is-ancestor', current, target)
     base = run('git', 'rev-parse', 'origin/master')
     branch = 'automation/osu-lazer-' + osu_tag
     existing = run('git', 'ls-remote', '--heads', 'origin', branch)

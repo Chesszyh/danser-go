@@ -22,8 +22,9 @@ CI bundles remain ad-hoc signed. The Go and .NET versions come from `go.mod` and
 
 `Update official lazer` checks daily at 10:23 Asia/Shanghai and can also be run
 manually. It follows published non-prerelease releases from `ppy/osu`, compares
-commit ancestry with `third_party/osu`, and skips releases already contained in
-the pinned source. It does not follow individual development commits.
+the release commit time with `third_party/osu`, and skips releases no newer than
+the pinned source. Official release hotfix branches may diverge from master, so
+ancestry alone is not used to decide whether to update. It does not follow individual development commits.
 
 A new release creates or resumes an `automation/osu-lazer-*` branch and PR, with
 the next fork revision and release notes. The workflow directly calls both build
