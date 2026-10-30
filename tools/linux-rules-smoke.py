@@ -22,7 +22,8 @@ def main():
             for member in package.infolist():
                 if member.external_attr >> 16:
                     (root / member.filename).chmod((member.external_attr >> 16) & 0o777)
-        env = dict(os.environ, FFMPEG=str(root / 'ffmpeg/bin/ffmpeg'))
+        env = dict(os.environ)
+        env.pop('FFMPEG', None)
         subprocess.run(['sh', str(repo / 'tools/macos-smoke-fixture.sh')], env=env, check=True, timeout=120)
         fixture = repo / '.deps/macos/smoke/Songs/000 macOS Port Smoke Test'
         host = root / 'lazer-rules-host/danser-lazer-rules'
